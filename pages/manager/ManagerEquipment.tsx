@@ -9,7 +9,7 @@ import {
   Package,
   CheckCircle2,
   AlertTriangle,
-  Tool,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '../../utils'
 
@@ -38,7 +38,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   Lenses: Camera,
   Audio: Headphones,
   Lighting: Lightbulb,
-  Support: Tool,
+  Support: Wrench,
   Other: Monitor,
 }
 
