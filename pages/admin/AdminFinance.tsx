@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/AppStore'
 import {
   DollarSign,
@@ -50,6 +51,7 @@ const budgetStatusStyles: Record<string, string> = {
 }
 
 export function AdminFinance() {
+  const navigate = useNavigate()
   const { expenses, updateExpense } = useStore()
   const totalRevenue = 816000
   const totalExpenses = 423000
@@ -161,7 +163,7 @@ export function AdminFinance() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-200 flex justify-between items-center">
             <h3 className="text-lg font-semibold text-slate-900">Expense Approvals</h3>
-            <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
+            <button onClick={() => navigate('/admin/finance')} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
           </div>
           <div className="divide-y divide-slate-200">
             {expenses.map((exp) => (

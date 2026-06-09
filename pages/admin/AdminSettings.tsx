@@ -49,8 +49,18 @@ export function AdminSettings() {
     }
   }
 
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({ brand: '', last4: '', expires: '' })
+
   const handleAddPayment = () => {
-    alert('Add payment method form would open here.')
+    setShowPaymentForm(true)
+    setPaymentForm({ brand: 'Visa', last4: '', expires: '' })
+  }
+
+  const handleSubmitPayment = () => {
+    if (!paymentForm.last4 || !paymentForm.expires) return
+    setPaymentMethods(prev => [...prev, { id: Date.now(), ...paymentForm }])
+    setShowPaymentForm(false)
   }
 
   return (
@@ -278,6 +288,27 @@ export function AdminSettings() {
                   </div>
                 ))}
                 <button onClick={handleAddPayment} className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700">+ Add payment method</button>
+
+                {showPaymentForm && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowPaymentForm(false)}>
+                    <div className="bg-white rounded-xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Payment Method</h3>
+                      <div className="space-y-3">
+                        <select value={paymentForm.brand} onChange={e => setPaymentForm({...paymentForm, brand: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                          <option>Visa</option>
+                          <option>Mastercard</option>
+                          <option>Amex</option>
+                        </select>
+                        <input type="text" placeholder="Card number (last 4 digits)" maxLength={4} value={paymentForm.last4} onChange={e => setPaymentForm({...paymentForm, last4: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                        <input type="text" placeholder="Expiry (MM/YYYY)" value={paymentForm.expires} onChange={e => setPaymentForm({...paymentForm, expires: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                      </div>
+                      <div className="flex justify-end gap-3 mt-6">
+                        <button onClick={() => setShowPaymentForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+                        <button onClick={handleSubmitPayment} className="bg-[#191970] text-white px-4 py-2 rounded-lg text-sm font-medium">Add</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-6 border-t border-slate-200">

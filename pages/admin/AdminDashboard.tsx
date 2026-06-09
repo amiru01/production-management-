@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/AppStore'
 import {
   DollarSign,
@@ -42,6 +43,7 @@ const projectStatusData = [
 
 export function AdminDashboard() {
   const { projects } = useStore()
+  const navigate = useNavigate()
 
   const activeProjects = projects.filter(p => p.status !== 'Completed').length
   const completedYTD = projects.filter(p => p.status === 'Completed').length
@@ -49,14 +51,14 @@ export function AdminDashboard() {
   const totalRevenue = 340000
 
   const kpis = [
-    { title: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+12%', icon: DollarSign, trend: 'up' as const },
-    { title: 'Total Expenses', value: '$185,000', change: '+5%', icon: TrendingUp, trend: 'down' as const },
-    { title: 'Active Projects', value: `${activeProjects}`, change: '+3', icon: Briefcase, trend: 'up' as const },
-    { title: 'Completed (YTD)', value: `${completedYTD}`, change: '+15%', icon: CheckCircle2, trend: 'up' as const },
-    { title: 'Team Utilization', value: '85%', change: '+2%', icon: Users, trend: 'up' as const },
-    { title: 'Eq. Utilization', value: '72%', change: '-4%', icon: Camera, trend: 'down' as const },
-    { title: 'Client Growth', value: '+8', change: 'This Month', icon: UserPlus, trend: 'neutral' as const },
-    { title: 'Monthly Profit', value: '$40,000', change: '+18%', icon: DollarSign, trend: 'up' as const },
+    { title: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+12%', icon: DollarSign, trend: 'up' as const, path: '/admin/finance' },
+    { title: 'Total Expenses', value: '$185,000', change: '+5%', icon: TrendingUp, trend: 'down' as const, path: '/admin/finance' },
+    { title: 'Active Projects', value: `${activeProjects}`, change: '+3', icon: Briefcase, trend: 'up' as const, path: '/admin/projects' },
+    { title: 'Completed (YTD)', value: `${completedYTD}`, change: '+15%', icon: CheckCircle2, trend: 'up' as const, path: '/admin/projects' },
+    { title: 'Team Utilization', value: '85%', change: '+2%', icon: Users, trend: 'up' as const, path: '/admin/users' },
+    { title: 'Eq. Utilization', value: '72%', change: '-4%', icon: Camera, trend: 'down' as const, path: '/admin/equipment' },
+    { title: 'Client Growth', value: '+8', change: 'This Month', icon: UserPlus, trend: 'neutral' as const, path: '/admin/clients' },
+    { title: 'Monthly Profit', value: '$40,000', change: '+18%', icon: DollarSign, trend: 'up' as const, path: '/admin/finance' },
   ]
 
   return (
@@ -73,7 +75,7 @@ export function AdminDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
-          <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <button key={i} onClick={() => navigate(kpi.path)} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left w-full cursor-pointer">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-slate-50 rounded-lg">
                 <kpi.icon className="w-5 h-5 text-slate-600" />
@@ -87,7 +89,7 @@ export function AdminDashboard() {
             </div>
             <h3 className="text-slate-500 text-sm font-medium">{kpi.title}</h3>
             <p className="text-2xl font-bold text-slate-900 mt-1">{kpi.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 

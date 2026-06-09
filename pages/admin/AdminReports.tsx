@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Download,
   FileText,
@@ -71,8 +72,10 @@ const initialRecentReports = [
 ]
 
 export function AdminReports() {
+  const navigate = useNavigate()
   const [recentReports, setRecentReports] = useState(initialRecentReports)
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   const handleDelete = (id: number) => {
     setOpenMenuId(null)
@@ -82,7 +85,8 @@ export function AdminReports() {
   }
 
   const handleDownload = (report: string) => {
-    alert(`Downloading ${report}...`)
+    setDownloading(report)
+    setTimeout(() => setDownloading(null), 2000)
   }
 
   return (
