@@ -68,7 +68,7 @@ export function AdminDashboard() {
           <h2 className="text-2xl font-bold text-slate-900">Overview</h2>
           <p className="text-slate-500">Company performance and high-level metrics.</p>
         </div>
-        <button onClick={() => alert('Downloading report...')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
+        <button onClick={() => navigate('/admin/reports')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
           Download Report
         </button>
       </div>
@@ -139,7 +139,7 @@ export function AdminDashboard() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-200 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-900">Upcoming Productions</h3>
-          <button onClick={() => alert('Viewing all productions...')} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
+          <button onClick={() => navigate('/admin/projects')} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
