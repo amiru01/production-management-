@@ -68,6 +68,7 @@ const roleConfigs: Record<Role, RoleConfig> = {
       { name: 'Team', path: '/manager/team', icon: Users },
       { name: 'Equipment', path: '/manager/equipment', icon: Camera },
       { name: 'Assets', path: '/manager/assets', icon: HardDrive },
+      { name: 'Messages', path: '/manager/messages', icon: MessageSquare },
     ],
   },
   crew: {
@@ -78,6 +79,7 @@ const roleConfigs: Record<Role, RoleConfig> = {
       { name: 'My Tasks', path: '/crew/tasks', icon: CheckSquare },
       { name: 'Schedule', path: '/crew/schedule', icon: Calendar },
       { name: 'Assets', path: '/crew/assets', icon: HardDrive },
+      { name: 'Messages', path: '/crew/messages', icon: MessageSquare },
     ],
   },
   accountant: {

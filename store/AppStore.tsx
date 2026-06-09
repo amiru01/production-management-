@@ -14,7 +14,7 @@ export interface Payment { id: string; invoice: string; client: string; amount: 
 export interface Task { id: number; title: string; project: string; priority: string; status: string; dueDate: string; assignee: string }
 export interface ScheduleEvent { id: number; date: number; title: string; project: string; location: string; crew: string | number; time: string; status: string }
 export interface Message { id: number; sender: string; text: string; time: string; isMe: boolean }
-export interface Conversation { id: number; name: string; role: string; avatar: string; lastMessage: string; time: string; unread: number; online: boolean; messages: Message[] }
+export interface Conversation { id: number; name: string; role: string; avatar: string; lastMessage: string; time: string; unread: number; online: boolean; project?: string; messages: Message[] }
 
 // ---------- Initial Data ----------
 const initialUsers: User[] = [
@@ -182,19 +182,38 @@ const initialAssets: Record<string, AssetFile[]> = {
 }
 
 const initialConversations: Conversation[] = [
-  { id: 1, name: 'Marcus Chen', role: 'Production Manager', avatar: 'MC', lastMessage: 'The rough cut looks great! Just a few notes...', time: '2m ago', unread: 2, online: true, messages: [
+  { id: 1, name: 'Marcus Chen', role: 'Production Manager', project: 'Summer Campaign', avatar: 'MC', lastMessage: 'The rough cut looks great! Just a few notes...', time: '2m ago', unread: 2, online: true, messages: [
     { id: 1, sender: 'Marcus Chen', text: 'Hey! Just finished the rough cut for the Nike campaign.', time: '10:30 AM', isMe: false },
     { id: 2, sender: 'You', text: 'Awesome, send it over!', time: '10:32 AM', isMe: true },
     { id: 3, sender: 'Marcus Chen', text: 'The rough cut looks great! Just a few notes on the color grading.', time: '10:35 AM', isMe: false },
   ]},
-  { id: 2, name: 'Elena Rodriguez', role: 'Director', avatar: 'ER', lastMessage: 'Location scouting is done for tomorrow.', time: '1h ago', unread: 0, online: true, messages: [
-    { id: 1, sender: 'Elena Rodriguez', text: 'Location scouting is done for tomorrow.', time: '12:00 PM', isMe: false },
+  { id: 2, name: 'Elena Rodriguez', role: 'Director', project: 'Summer Campaign', avatar: 'ER', lastMessage: 'Location scouting is done for Nike tomorrow.', time: '1h ago', unread: 0, online: true, messages: [
+    { id: 1, sender: 'Elena Rodriguez', text: 'Location scouting is done for Nike tomorrow.', time: '12:00 PM', isMe: false },
   ]},
-  { id: 3, name: 'Sarah Jenkins', role: 'Studio Admin', avatar: 'SJ', lastMessage: 'New budget approval needed for equipment rental.', time: '3h ago', unread: 1, online: false, messages: [
+  { id: 3, name: 'Sarah Jenkins', role: 'Super Admin', project: 'All Projects', avatar: 'SJ', lastMessage: 'New budget approval needed for equipment rental.', time: '3h ago', unread: 1, online: false, messages: [
     { id: 1, sender: 'Sarah Jenkins', text: 'New budget approval needed for equipment rental.', time: '9:00 AM', isMe: false },
   ]},
-  { id: 4, name: 'David Kim', role: 'Editor', avatar: 'DK', lastMessage: 'Exporting the final cut now.', time: '5h ago', unread: 0, online: false, messages: [] },
-  { id: 5, name: 'Amanda Foster', role: 'Project Manager', avatar: 'AF', lastMessage: 'Updated the project timeline.', time: '1d ago', unread: 0, online: false, messages: [] },
+  { id: 4, name: 'David Kim', role: 'DP', project: 'Artist Spotlight', avatar: 'DK', lastMessage: 'Ready for the Spotify spotlight shoot.', time: '5h ago', unread: 0, online: false, messages: [
+    { id: 1, sender: 'David Kim', text: 'Ready for the Spotify spotlight shoot tomorrow.', time: '8:00 AM', isMe: false },
+  ]},
+  { id: 5, name: 'Amanda Foster', role: 'Accountant', project: 'All Projects', avatar: 'AF', lastMessage: 'Updated the project budget breakdown.', time: '1d ago', unread: 0, online: false, messages: [
+    { id: 1, sender: 'Amanda Foster', text: 'Updated the project budget breakdown.', time: '2:00 PM', isMe: false },
+  ]},
+  { id: 6, name: 'Mike T.', role: 'Sound Engineer', project: 'Summer Campaign', avatar: 'MT', lastMessage: 'Audio equipment checked and ready.', time: '2h ago', unread: 0, online: true, messages: [
+    { id: 1, sender: 'Mike T.', text: 'Audio equipment checked and ready for tomorrow.', time: '11:00 AM', isMe: false },
+  ]},
+  { id: 7, name: 'Tom S.', role: 'PA', project: 'Summer Campaign', avatar: 'TS', lastMessage: 'Permits are all sorted for the location.', time: '4h ago', unread: 0, online: true, messages: [
+    { id: 1, sender: 'Tom S.', text: 'Permits are all sorted for the downtown location.', time: '9:30 AM', isMe: false },
+  ]},
+  { id: 8, name: 'Anna P.', role: 'Gaffer', project: 'Product Launch', avatar: 'AP', lastMessage: 'Lighting setup will be done by 7am.', time: '6h ago', unread: 0, online: false, messages: [
+    { id: 1, sender: 'Anna P.', text: 'Lighting setup will be done by 7am on shoot day.', time: '7:00 AM', isMe: false },
+  ]},
+  { id: 9, name: 'Sarah Jenkins', role: 'Client (Nike)', project: 'Summer Campaign', avatar: 'SJ', lastMessage: 'Looking forward to the campaign preview.', time: '1d ago', unread: 1, online: false, messages: [
+    { id: 1, sender: 'Sarah Jenkins', text: 'Looking forward to the campaign preview next week.', time: '3:00 PM', isMe: false },
+  ]},
+  { id: 10, name: 'Marcus Chen', role: 'Client (TechCorp)', project: 'Product Launch', avatar: 'MC', lastMessage: 'Can we review the storyboard?', time: '2d ago', unread: 0, online: false, messages: [
+    { id: 1, sender: 'Marcus Chen', text: 'Can we review the storyboard this week?', time: '1:00 PM', isMe: false },
+  ]},
 ]
 
 // ---------- Context ----------

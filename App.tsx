@@ -28,11 +28,13 @@ import { ManagerScheduling } from './pages/manager/ManagerScheduling'
 import { ManagerTeam } from './pages/manager/ManagerTeam'
 import { ManagerEquipment } from './pages/manager/ManagerEquipment'
 import { ManagerAssets } from './pages/manager/ManagerAssets'
+import { ManagerMessages } from './pages/manager/ManagerMessages'
 // Crew
 import { CrewDashboard } from './pages/crew/CrewDashboard'
 import { CrewTasks } from './pages/crew/CrewTasks'
 import { CrewSchedule } from './pages/crew/CrewSchedule'
 import { CrewAssets } from './pages/crew/CrewAssets'
+import { CrewMessages } from './pages/crew/CrewMessages'
 // Accountant
 import { AccountantDashboard } from './pages/accountant/AccountantDashboard'
 import { Invoices } from './pages/accountant/Invoices'
@@ -87,6 +89,7 @@ function ProtectedRoutes({ role }: { role: Role }) {
         <Route path="team" element={<ManagerTeam />} />
         <Route path="equipment" element={<ManagerEquipment />} />
         <Route path="assets" element={<ManagerAssets />} />
+        <Route path="messages" element={<ManagerMessages />} />
       </Routes>
     ),
     crew: (
@@ -95,6 +98,7 @@ function ProtectedRoutes({ role }: { role: Role }) {
         <Route path="tasks" element={<CrewTasks />} />
         <Route path="schedule" element={<CrewSchedule />} />
         <Route path="assets" element={<CrewAssets />} />
+        <Route path="messages" element={<CrewMessages />} />
       </Routes>
     ),
     accountant: (

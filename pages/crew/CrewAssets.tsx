@@ -12,6 +12,7 @@ import {
   Download,
   RefreshCw,
   Trash2,
+  File,
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { useStore } from '../../store/AppStore'
@@ -33,7 +34,20 @@ interface AssetFile {
   feedback?: { from: string; comment: string; date: string }[]
 }
 
-const fileTypeIcons: Record<FileType, any> = {
+const storeTypeToLocal: Record<string, FileType> = {
+  Video: 'Video',
+  Audio: 'Audio',
+  Image: 'Photo',
+  Photo: 'Photo',
+  Archive: 'Document',
+  Motion: 'Video',
+  Presentation: 'Document',
+  PSD: 'Photo',
+  PDF: 'Document',
+  Document: 'Document',
+}
+
+const fileTypeIcons: Record<string, any> = {
   Video: FileVideo,
   Audio: FileAudio,
   Photo: FileImage,
@@ -58,7 +72,7 @@ export function CrewAssets() {
         allFiles.push({
           id: Date.now() + Math.random(),
           name: f.name,
-          type: f.type as FileType,
+          type: storeTypeToLocal[f.type] || 'Document',
           project: f.project,
           uploadedAt: f.date,
           status: 'Uploaded' as FileStatus,
@@ -175,7 +189,7 @@ export function CrewAssets() {
         <p className="text-xs text-slate-400">Supports MP4, MOV, WAV, JPG, PNG, PDF up to 10GB</p>
         <div className="flex items-center justify-center gap-3 mt-4">
           {fileTypeFilters.map((ft) => {
-            const Icon = fileTypeIcons[ft]
+            const Icon = fileTypeIcons[ft] || File
             return (
               <span key={ft} className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
                 <Icon className="w-3 h-3" /> {ft}
@@ -233,7 +247,7 @@ export function CrewAssets() {
                           file.type === 'Video' && 'bg-blue-50', file.type === 'Audio' && 'bg-purple-50',
                           file.type === 'Photo' && 'bg-green-50', file.type === 'Document' && 'bg-amber-50'
                         )}>
-                          <TypeIcon className="w-4 h-4 text-slate-600" />
+                          {TypeIcon ? <TypeIcon className="w-4 h-4 text-slate-600" /> : <File className="w-4 h-4 text-slate-600" />}
                         </div>
                         <div className="font-medium text-slate-900 text-sm truncate max-w-[200px]">{file.name}</div>
                       </div>
@@ -290,7 +304,7 @@ export function CrewAssets() {
                             <button onClick={() => submitForReview(file.id)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Submit for Review">
                               <Send className="w-4 h-4" />
                             </button>
-                            <button onClick={() => alert(`Downloading ${file.name}...`)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download">
+                            <button onClick={() => { const a = document.createElement('a'); a.href = '#'; a.download = file.name; a.click(); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download">
                               <Download className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleDelete(file)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
