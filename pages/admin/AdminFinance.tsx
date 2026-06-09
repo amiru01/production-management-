@@ -1,4 +1,5 @@
 import React from 'react'
+import { useStore } from '../../store/AppStore'
 import {
   DollarSign,
   TrendingUp,
@@ -42,14 +43,6 @@ const budgets = [
   { department: 'Marketing', allocated: 200000, spent: 140000, remaining: 60000, status: 'On Track' },
 ]
 
-const expenseApprovals = [
-  { id: 1, description: 'Camera Lens Rental - ARRI 50mm', department: 'Equipment', amount: 4500, requestedBy: 'Marcus Chen', date: 'Oct 12, 2026', status: 'Pending' },
-  { id: 2, description: 'Location Fee - Downtown Studio', department: 'Production', amount: 8000, requestedBy: 'Elena Rodriguez', date: 'Oct 11, 2026', status: 'Pending' },
-  { id: 3, description: 'Catering - 3 Day Shoot', department: 'Production', amount: 3200, requestedBy: 'David Kim', date: 'Oct 10, 2026', status: 'Approved' },
-  { id: 4, description: 'Drone Operator - Aerial Footage', department: 'Talent', amount: 6500, requestedBy: 'Amanda Foster', date: 'Oct 9, 2026', status: 'Pending' },
-  { id: 5, description: 'Color Grading Suite Rental', department: 'Post-Production', amount: 2800, requestedBy: 'James Wilson', date: 'Oct 8, 2026', status: 'Rejected' },
-]
-
 const budgetStatusStyles: Record<string, string> = {
   'On Track': 'bg-emerald-50 text-emerald-700',
   'At Risk': 'bg-amber-50 text-amber-700',
@@ -57,10 +50,11 @@ const budgetStatusStyles: Record<string, string> = {
 }
 
 export function AdminFinance() {
+  const { expenses, updateExpense } = useStore()
   const totalRevenue = 816000
   const totalExpenses = 423000
   const netProfit = totalRevenue - totalExpenses
-  const pendingPayables = expenseApprovals.filter(e => e.status === 'Pending').reduce((s, e) => s + e.amount, 0)
+  const pendingPayables = expenses.filter(e => e.status === 'Pending').reduce((s, e) => s + e.amount, 0)
 
   return (
     <div className="space-y-6">
@@ -170,7 +164,7 @@ export function AdminFinance() {
             <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
           </div>
           <div className="divide-y divide-slate-200">
-            {expenseApprovals.map((exp) => (
+            {expenses.map((exp) => (
               <div key={exp.id} className="p-4 hover:bg-slate-50 transition-colors">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1 min-w-0">
@@ -183,10 +177,10 @@ export function AdminFinance() {
                   {exp.status === 'Pending' ? (
                     <>
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-700">Pending</span>
-                      <button className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 px-2 py-1 rounded hover:bg-emerald-50 transition-colors">
+                      <button onClick={() => updateExpense(exp.id, { status: 'Approved' })} className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 px-2 py-1 rounded hover:bg-emerald-50 transition-colors">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                       </button>
-                      <button className="flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 transition-colors">
+                      <button onClick={() => updateExpense(exp.id, { status: 'Rejected' })} className="flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 transition-colors">
                         <XCircle className="w-3.5 h-3.5" /> Reject
                       </button>
                     </>

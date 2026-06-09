@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Download,
   FileText,
@@ -8,6 +8,8 @@ import {
   Briefcase,
   Clock,
   MoreVertical,
+  X,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../utils'
 
@@ -59,7 +61,7 @@ const reportTypes = [
   },
 ]
 
-const recentReports = [
+const initialRecentReports = [
   { id: 1, type: 'Revenue Report', date: 'Oct 15, 2026', generatedBy: 'Sarah Jenkins', status: 'Generated', format: 'PDF' },
   { id: 2, type: 'Expense Report', date: 'Oct 14, 2026', generatedBy: 'Sarah Jenkins', status: 'Generated', format: 'CSV' },
   { id: 3, type: 'Team Performance', date: 'Oct 12, 2026', generatedBy: 'Marcus Chen', status: 'Generated', format: 'PDF' },
@@ -69,6 +71,20 @@ const recentReports = [
 ]
 
 export function AdminReports() {
+  const [recentReports, setRecentReports] = useState(initialRecentReports)
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+
+  const handleDelete = (id: number) => {
+    setOpenMenuId(null)
+    if (confirm('Are you sure you want to delete this report?')) {
+      setRecentReports(prev => prev.filter(r => r.id !== id))
+    }
+  }
+
+  const handleDownload = (report: string) => {
+    alert(`Downloading ${report}...`)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,7 +110,7 @@ export function AdminReports() {
                   <Clock className="w-3.5 h-3.5" />
                   {report.lastGenerated}
                 </div>
-                <button className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+                <button onClick={() => handleDownload(report.title)} className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
                   <Download className="w-4 h-4" />
                   Download
                 </button>
@@ -142,15 +158,22 @@ export function AdminReports() {
                   <td className="p-4">
                     <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">{report.format}</span>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-4 text-right relative">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                      <button onClick={() => handleDownload(report.type)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                         <Download className="w-4 h-4" />
                       </button>
-                      <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                      <button onClick={() => setOpenMenuId(openMenuId === report.id ? null : report.id)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                         <MoreVertical className="w-4 h-4" />
                       </button>
                     </div>
+                    {openMenuId === report.id && (
+                      <div className="absolute right-4 top-10 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 min-w-[120px]">
+                        <button onClick={() => handleDelete(report.id)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

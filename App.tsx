@@ -6,6 +6,7 @@ import {
   Navigate,
 } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { AppStoreProvider } from './store/AppStore'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import type { Role } from './lib/permissions'
@@ -153,7 +154,9 @@ export function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <AppStoreProvider>
+          <AppRoutes />
+        </AppStoreProvider>
       </AuthProvider>
     </Router>
   )

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Video,
   CheckCircle2,
@@ -9,28 +10,39 @@ import {
   Clock,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-const myProjects = [
-  { id: 1, name: 'Summer Campaign 2024', status: 'In Production', progress: 65, nextMilestone: 'Rough Cut Review', date: 'Oct 18' },
-  { id: 2, name: 'Social Media Shorts', status: 'Planning', progress: 15, nextMilestone: 'Script Approval', date: 'Oct 22' },
-]
-
-const pendingApprovals = [
-  { id: 1, title: 'Storyboard V2', project: 'Social Media Shorts', type: 'Document', time: '2 hours ago' },
-  { id: 2, title: 'Location Options', project: 'Summer Campaign 2024', type: 'Gallery', time: '1 day ago' },
-]
-
-const recentDeliverables = [
-  { id: 1, title: 'Casting Tape - Lead Role', project: 'Summer Campaign 2024', type: 'Video', date: 'Oct 10' },
-  { id: 2, title: 'Moodboard Final', project: 'Social Media Shorts', type: 'PDF', date: 'Oct 08' },
-]
-
-const recentInvoices = [
-  { id: 'INV-2023-089', amount: '$22,500.00', status: 'Paid', date: 'Oct 01', isDue: false },
-  { id: 'INV-2023-095', amount: '$15,000.00', status: 'Due Oct 25', date: 'Oct 11', isDue: true },
-]
+import { useStore } from '../../store/AppStore'
 
 export function ClientDashboard() {
+  const navigate = useNavigate()
+  const { projects, invoices } = useStore()
+
+  const myProjects = projects.filter(p => p.status !== 'Completed').slice(0, 2).map(p => ({
+    id: p.id,
+    name: p.name,
+    status: p.status,
+    progress: p.progress,
+    nextMilestone: p.timeline?.split(' - ')[1] || p.status,
+    date: p.timeline?.split(' - ')[1] || 'TBD'
+  }))
+
+  const pendingApprovals = [
+    { id: 1, title: 'Storyboard V2', project: 'Social Media Shorts', type: 'Document', time: '2 hours ago' },
+    { id: 2, title: 'Location Options', project: 'Summer Campaign 2024', type: 'Gallery', time: '1 day ago' },
+  ]
+
+  const recentDeliverables = [
+    { id: 1, title: 'Casting Tape - Lead Role', project: 'Summer Campaign 2024', type: 'Video', date: 'Oct 10' },
+    { id: 2, title: 'Moodboard Final', project: 'Social Media Shorts', type: 'PDF', date: 'Oct 08' },
+  ]
+
+  const recentInvoices = invoices.slice(0, 2).map(inv => ({
+    id: inv.id,
+    amount: '$' + inv.amount.toLocaleString() + '.00',
+    status: inv.status === 'Paid' ? 'Paid' : 'Due ' + inv.dueDate,
+    date: inv.date,
+    isDue: inv.status !== 'Paid'
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -38,7 +50,7 @@ export function ClientDashboard() {
           <h2 className="text-2xl font-bold text-slate-900">Welcome back, Nike Team</h2>
           <p className="text-slate-500">Here&apos;s the latest on your projects with Lumen Studio.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+        <button onClick={() => navigate('/client/messages')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
           <MessageSquare className="w-4 h-4" /> Message Producer
         </button>
       </div>
@@ -90,8 +102,8 @@ export function ClientDashboard() {
                     <p className="text-sm text-slate-500">{item.project}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Review</button>
-                    <button className="px-3 py-1.5 text-sm font-medium text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors">Approve</button>
+                    <button onClick={() => navigate('/client/deliverables')} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Review</button>
+                    <button onClick={() => navigate('/client/deliverables')} className="px-3 py-1.5 text-sm font-medium text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors">Approve</button>
                   </div>
                 </div>
               ))}
@@ -103,7 +115,7 @@ export function ClientDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
               <h3 className="font-semibold text-slate-900">Recent Deliverables</h3>
-              <button className="text-sm text-rose-600 font-medium hover:text-rose-700">View All</button>
+              <button onClick={() => navigate('/client/deliverables')} className="text-sm text-rose-600 font-medium hover:text-rose-700">View All</button>
             </div>
             <div className="divide-y divide-slate-100">
               {recentDeliverables.map((item) => (
@@ -127,7 +139,7 @@ export function ClientDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
               <h3 className="font-semibold text-slate-900">Billing</h3>
-              <button className="text-sm text-rose-600 font-medium hover:text-rose-700">All Invoices</button>
+              <button onClick={() => navigate('/client/invoices')} className="text-sm text-rose-600 font-medium hover:text-rose-700">All Invoices</button>
             </div>
             <div className="divide-y divide-slate-100">
               {recentInvoices.map((inv) => (
@@ -145,7 +157,7 @@ export function ClientDashboard() {
             </div>
             {recentInvoices.some(i => i.isDue) && (
               <div className="p-3 border-t border-slate-200 bg-amber-50/50">
-                <button className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">Pay Outstanding Balance</button>
+                <button onClick={() => navigate('/client/invoices')} className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">Pay Outstanding Balance</button>
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useStore } from '../../store/AppStore'
 import {
   DollarSign,
   TrendingUp,
@@ -39,25 +40,25 @@ const projectStatusData = [
   { name: 'Review', value: 2 },
 ]
 
-const kpis = [
-  { title: 'Total Revenue', value: '$340,000', change: '+12%', icon: DollarSign, trend: 'up' as const },
-  { title: 'Total Expenses', value: '$185,000', change: '+5%', icon: TrendingUp, trend: 'down' as const },
-  { title: 'Active Projects', value: '22', change: '+3', icon: Briefcase, trend: 'up' as const },
-  { title: 'Completed (YTD)', value: '45', change: '+15%', icon: CheckCircle2, trend: 'up' as const },
-  { title: 'Team Utilization', value: '85%', change: '+2%', icon: Users, trend: 'up' as const },
-  { title: 'Eq. Utilization', value: '72%', change: '-4%', icon: Camera, trend: 'down' as const },
-  { title: 'Client Growth', value: '+8', change: 'This Month', icon: UserPlus, trend: 'neutral' as const },
-  { title: 'Monthly Profit', value: '$40,000', change: '+18%', icon: DollarSign, trend: 'up' as const },
-]
-
-const upcomingProductions = [
-  { id: 1, client: 'Nike', project: 'Summer Campaign', date: 'Oct 15 - Oct 18', status: 'Pre-Production', budget: '$45,000' },
-  { id: 2, client: 'TechCorp', project: 'Product Launch', date: 'Oct 20 - Oct 22', status: 'Planning', budget: '$28,000' },
-  { id: 3, client: 'Local Coffee', project: 'Brand Story', date: 'Oct 25', status: 'Planning', budget: '$8,500' },
-  { id: 4, client: 'Spotify', project: 'Artist Spotlight', date: 'Nov 2 - Nov 5', status: 'Contracting', budget: '$65,000' },
-]
-
 export function AdminDashboard() {
+  const { projects } = useStore()
+
+  const activeProjects = projects.filter(p => p.status !== 'Completed').length
+  const completedYTD = projects.filter(p => p.status === 'Completed').length
+  const totalBudget = projects.reduce((s, p) => s + p.budget, 0)
+  const totalRevenue = 340000
+
+  const kpis = [
+    { title: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+12%', icon: DollarSign, trend: 'up' as const },
+    { title: 'Total Expenses', value: '$185,000', change: '+5%', icon: TrendingUp, trend: 'down' as const },
+    { title: 'Active Projects', value: `${activeProjects}`, change: '+3', icon: Briefcase, trend: 'up' as const },
+    { title: 'Completed (YTD)', value: `${completedYTD}`, change: '+15%', icon: CheckCircle2, trend: 'up' as const },
+    { title: 'Team Utilization', value: '85%', change: '+2%', icon: Users, trend: 'up' as const },
+    { title: 'Eq. Utilization', value: '72%', change: '-4%', icon: Camera, trend: 'down' as const },
+    { title: 'Client Growth', value: '+8', change: 'This Month', icon: UserPlus, trend: 'neutral' as const },
+    { title: 'Monthly Profit', value: '$40,000', change: '+18%', icon: DollarSign, trend: 'up' as const },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -65,7 +66,7 @@ export function AdminDashboard() {
           <h2 className="text-2xl font-bold text-slate-900">Overview</h2>
           <p className="text-slate-500">Company performance and high-level metrics.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
+        <button onClick={() => alert('Downloading report...')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
           Download Report
         </button>
       </div>
@@ -136,7 +137,7 @@ export function AdminDashboard() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-200 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-900">Upcoming Productions</h3>
-          <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
+          <button onClick={() => alert('Viewing all productions...')} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View All</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -149,22 +150,22 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {upcomingProductions.map((prod) => (
+              {projects.slice(0, 4).map((prod) => (
                 <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4">
                     <div className="font-medium text-slate-900">{prod.client}</div>
-                    <div className="text-sm text-slate-500">{prod.project}</div>
+                    <div className="text-sm text-slate-500">{prod.name}</div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center text-sm text-slate-600">
                       <Calendar className="w-4 h-4 mr-2 text-slate-400" />
-                      {prod.date}
+                      {prod.timeline}
                     </div>
                   </td>
                   <td className="p-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{prod.status}</span>
                   </td>
-                  <td className="p-4 text-right font-medium text-slate-900">{prod.budget}</td>
+                  <td className="p-4 text-right font-medium text-slate-900">${prod.budget.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

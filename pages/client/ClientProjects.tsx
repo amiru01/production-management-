@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FolderKanban,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   FileCheck,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 interface Milestone {
   name: string
@@ -39,120 +41,6 @@ interface Project {
   team: TeamMember[]
   deliverablesCount: number
 }
-
-const projects: Project[] = [
-  {
-    id: 1,
-    name: 'Summer Campaign 2024',
-    status: 'Active',
-    progress: 65,
-    startDate: 'Aug 01, 2024',
-    endDate: 'Nov 30, 2024',
-    nextMilestone: 'Rough Cut Review',
-    nextMilestoneDate: 'Oct 18',
-    milestones: [
-      { name: 'Script Approval', due: 'Aug 20', status: 'completed' },
-      { name: 'Storyboard Finalized', due: 'Sep 05', status: 'completed' },
-      { name: 'Principal Photography', due: 'Sep 28', status: 'completed' },
-      { name: 'Rough Cut Review', due: 'Oct 18', status: 'in-progress' },
-      { name: 'Final Delivery', due: 'Nov 30', status: 'upcoming' },
-    ],
-    team: [
-      { name: 'Sarah Chen', role: 'Producer' },
-      { name: 'Marcus Lee', role: 'Director' },
-      { name: 'Emily Park', role: 'Editor' },
-      { name: 'David Kim', role: 'DP' },
-    ],
-    deliverablesCount: 12,
-  },
-  {
-    id: 2,
-    name: 'Social Media Shorts',
-    status: 'Active',
-    progress: 30,
-    startDate: 'Sep 15, 2024',
-    endDate: 'Dec 15, 2024',
-    nextMilestone: 'Script Approval',
-    nextMilestoneDate: 'Oct 22',
-    milestones: [
-      { name: 'Creative Brief', due: 'Sep 22', status: 'completed' },
-      { name: 'Script Approval', due: 'Oct 22', status: 'in-progress' },
-      { name: 'Production', due: 'Nov 15', status: 'upcoming' },
-      { name: 'Post-Production', due: 'Dec 05', status: 'upcoming' },
-      { name: 'Final Delivery', due: 'Dec 15', status: 'upcoming' },
-    ],
-    team: [
-      { name: 'Sarah Chen', role: 'Producer' },
-      { name: 'Jake Torres', role: 'Editor' },
-    ],
-    deliverablesCount: 6,
-  },
-  {
-    id: 3,
-    name: 'Product Launch Video',
-    status: 'In Review',
-    progress: 90,
-    startDate: 'Jul 01, 2024',
-    endDate: 'Oct 10, 2024',
-    nextMilestone: 'Client Approval',
-    nextMilestoneDate: 'Oct 12',
-    milestones: [
-      { name: 'Pre-Production', due: 'Jul 25', status: 'completed' },
-      { name: 'Production', due: 'Aug 30', status: 'completed' },
-      { name: 'Post-Production', due: 'Sep 20', status: 'completed' },
-      { name: 'Client Approval', due: 'Oct 12', status: 'in-progress' },
-    ],
-    team: [
-      { name: 'Marcus Lee', role: 'Director' },
-      { name: 'Emily Park', role: 'Editor' },
-      { name: 'Lisa Wang', role: 'Sound Designer' },
-    ],
-    deliverablesCount: 8,
-  },
-  {
-    id: 4,
-    name: 'Brand Documentary',
-    status: 'Completed',
-    progress: 100,
-    startDate: 'May 01, 2024',
-    endDate: 'Sep 30, 2024',
-    nextMilestone: 'Delivered',
-    nextMilestoneDate: 'Sep 30',
-    milestones: [
-      { name: 'Research & Development', due: 'Jun 01', status: 'completed' },
-      { name: 'Principal Photography', due: 'Jul 15', status: 'completed' },
-      { name: 'Post-Production', due: 'Sep 01', status: 'completed' },
-      { name: 'Final Delivery', due: 'Sep 30', status: 'completed' },
-    ],
-    team: [
-      { name: 'Sarah Chen', role: 'Producer' },
-      { name: 'David Kim', role: 'DP' },
-      { name: 'Jake Torres', role: 'Editor' },
-    ],
-    deliverablesCount: 15,
-  },
-  {
-    id: 5,
-    name: 'Holiday Campaign 2024',
-    status: 'Planning',
-    progress: 10,
-    startDate: 'Oct 01, 2024',
-    endDate: 'Dec 20, 2024',
-    nextMilestone: 'Creative Brief',
-    nextMilestoneDate: 'Oct 15',
-    milestones: [
-      { name: 'Creative Brief', due: 'Oct 15', status: 'in-progress' },
-      { name: 'Concept Development', due: 'Nov 01', status: 'upcoming' },
-      { name: 'Production', due: 'Nov 25', status: 'upcoming' },
-      { name: 'Final Delivery', due: 'Dec 20', status: 'upcoming' },
-    ],
-    team: [
-      { name: 'Sarah Chen', role: 'Producer' },
-      { name: 'Marcus Lee', role: 'Director' },
-    ],
-    deliverablesCount: 4,
-  },
-]
 
 const statusColor: Record<string, string> = {
   Active: 'bg-blue-50 text-blue-700',
@@ -180,12 +68,36 @@ const milestoneStatusLine: Record<string, string> = {
   upcoming: 'bg-slate-200',
 }
 
+const storeStatusToLocal: Record<string, 'Active' | 'Completed' | 'In Review' | 'Planning'> = {
+  'In Production': 'Active',
+  'Planning': 'Planning',
+  'Post-Production': 'In Review',
+  'Pre-Production': 'Planning',
+  'Completed': 'Completed',
+}
+
 export function ClientProjects() {
+  const navigate = useNavigate()
+  const { projects: storeProjects } = useStore()
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id)
   }
+
+  const projects: Project[] = storeProjects.map(p => ({
+    id: p.id,
+    name: p.name,
+    status: storeStatusToLocal[p.status] || 'Active',
+    progress: p.progress,
+    startDate: p.timeline?.split(' - ')[0] || 'TBD',
+    endDate: p.timeline?.split(' - ')[1] || 'TBD',
+    nextMilestone: p.status,
+    nextMilestoneDate: p.timeline?.split(' - ')[1] || 'TBD',
+    milestones: [],
+    team: [],
+    deliverablesCount: 0,
+  }))
 
   const stats = {
     active: projects.filter((p) => p.status === 'Active').length,
@@ -280,18 +192,22 @@ export function ClientProjects() {
                   <div>
                     <h5 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2"><ListTodo className="w-4 h-4" /> Milestones</h5>
                     <div className="space-y-1">
-                      {project.milestones.map((ms, i) => (
-                        <div key={ms.name} className="flex items-center gap-3">
-                          <div className="flex flex-col items-center">
-                            {milestoneStatusIcon[ms.status]}
-                            {i < project.milestones.length - 1 && <div className={cn('w-0.5 h-6', milestoneStatusLine[ms.status])} />}
+                      {project.milestones.length > 0 ? (
+                        project.milestones.map((ms, i) => (
+                          <div key={ms.name} className="flex items-center gap-3">
+                            <div className="flex flex-col items-center">
+                              {milestoneStatusIcon[ms.status]}
+                              {i < project.milestones.length - 1 && <div className={cn('w-0.5 h-6', milestoneStatusLine[ms.status])} />}
+                            </div>
+                            <div className={cn('flex-1 flex items-center justify-between py-1', ms.status === 'upcoming' && 'opacity-50')}>
+                              <span className={cn('text-sm', ms.status === 'completed' ? 'text-emerald-700 line-through' : 'text-slate-900')}>{ms.name}</span>
+                              <span className="text-xs text-slate-400">{ms.due}</span>
+                            </div>
                           </div>
-                          <div className={cn('flex-1 flex items-center justify-between py-1', ms.status === 'upcoming' && 'opacity-50')}>
-                            <span className={cn('text-sm', ms.status === 'completed' ? 'text-emerald-700 line-through' : 'text-slate-900')}>{ms.name}</span>
-                            <span className="text-xs text-slate-400">{ms.due}</span>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-400">No milestones data available.</p>
+                      )}
                     </div>
                   </div>
 
@@ -299,23 +215,27 @@ export function ClientProjects() {
                     <div>
                       <h5 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2"><Users className="w-4 h-4" /> Team Assigned</h5>
                       <div className="space-y-1.5">
-                        {project.team.map((member) => (
-                          <div key={member.name} className="flex items-center gap-2 text-sm">
-                            <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold">
-                              {member.name.split(' ').map(n => n[0]).join('')}
+                        {project.team.length > 0 ? (
+                          project.team.map((member) => (
+                            <div key={member.name} className="flex items-center gap-2 text-sm">
+                              <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold">
+                                {member.name.split(' ').map(n => n[0]).join('')}
+                              </div>
+                              <div>
+                                <span className="text-slate-900 font-medium">{member.name}</span>
+                                <span className="text-slate-400 ml-1.5">({member.role})</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-slate-900 font-medium">{member.name}</span>
-                              <span className="text-slate-400 ml-1.5">({member.role})</span>
-                            </div>
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400">No team data available.</p>
+                        )}
                       </div>
                     </div>
                     <div>
                       <h5 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> Deliverables</h5>
                       <p className="text-slate-600 text-sm">{project.deliverablesCount} total deliverables across this project.</p>
-                      <button className="mt-3 text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors">View All Deliverables &rarr;</button>
+                      <button onClick={() => navigate('/client/deliverables')} className="mt-3 text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors">View All Deliverables &rarr;</button>
                     </div>
                   </div>
                 </div>

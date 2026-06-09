@@ -10,28 +10,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   Wrench,
+  X,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 const categories = ['All', 'Cameras', 'Lenses', 'Audio', 'Lighting', 'Support', 'Other']
-
-const equipment = [
-  { id: 1, name: 'RED V-Raptor', category: 'Cameras', status: 'In Use', assigned: 'Studio A - Nike Shoot' },
-  { id: 2, name: 'ARRI Alexa Mini', category: 'Cameras', status: 'Available', assigned: 'Gear Room' },
-  { id: 3, name: 'Sony FX6', category: 'Cameras', status: 'Available', assigned: 'Gear Room' },
-  { id: 4, name: 'Cooke S4 Prime Set', category: 'Lenses', status: 'In Use', assigned: 'Studio A - Nike Shoot' },
-  { id: 5, name: 'Canon CN-E 24mm', category: 'Lenses', status: 'Maintenance', assigned: 'Repair Shop' },
-  { id: 6, name: 'Atlas Orion Set', category: 'Lenses', status: 'Available', assigned: 'Gear Room' },
-  { id: 7, name: 'Sennheiser MKH416', category: 'Audio', status: 'In Use', assigned: 'Set B - Interview' },
-  { id: 8, name: 'Sound Devices MixPre', category: 'Audio', status: 'Available', assigned: 'Gear Room' },
-  { id: 9, name: 'DJI Mic 2 Set', category: 'Audio', status: 'Available', assigned: 'Gear Room' },
-  { id: 10, name: 'Aputure 600d Pro', category: 'Lighting', status: 'In Use', assigned: 'Studio A' },
-  { id: 11, name: 'Nanlite Forza 300', category: 'Lighting', status: 'Available', assigned: 'Gear Room' },
-  { id: 12, name: 'DJI Ronin 4D', category: 'Cameras', status: 'Maintenance', assigned: 'Repair Shop' },
-  { id: 13, name: 'DJI RS4 Pro', category: 'Support', status: 'Available', assigned: 'Gear Room' },
-  { id: 14, name: 'C-Stand Kit (x4)', category: 'Support', status: 'In Use', assigned: 'Studio A' },
-  { id: 15, name: 'SmallHD Cine 13', category: 'Other', status: 'Available', assigned: 'Gear Room' },
-]
 
 const categoryIcons: Record<string, React.ElementType> = {
   Cameras: Camera,
@@ -42,22 +26,69 @@ const categoryIcons: Record<string, React.ElementType> = {
   Other: Monitor,
 }
 
-const statCards = [
-  { label: 'Total Items', value: '48', icon: Package, color: 'bg-blue-50 text-blue-600' },
-  { label: 'In Use', value: '16', icon: CheckCircle2, color: 'bg-amber-50 text-amber-600' },
-  { label: 'Available', value: '28', icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-600' },
-  { label: 'Maintenance', value: '4', icon: AlertTriangle, color: 'bg-rose-50 text-rose-600' },
-]
-
 export function ManagerEquipment() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [assignItem, setAssignItem] = useState('')
+  const [form, setForm] = useState({ name: '', category: 'Cameras', status: 'Available', assignedTo: '', location: '', returnDate: '' })
+  const [assignForm, setAssignForm] = useState({ assignedTo: '', location: '' })
+  const { equipment, addEquipment, updateEquipment, deleteEquipment } = useStore()
+
+  const statCards = [
+    { label: 'Total Items', value: String(equipment.length), icon: Package, color: 'bg-blue-50 text-blue-600' },
+    { label: 'In Use', value: String(equipment.filter(e => e.status === 'In Use').length), icon: CheckCircle2, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Available', value: String(equipment.filter(e => e.status === 'Available').length), icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Maintenance', value: String(equipment.filter(e => e.status === 'Maintenance').length), icon: AlertTriangle, color: 'bg-rose-50 text-rose-600' },
+  ]
 
   const filtered = equipment.filter((e) => {
     const matchesCategory = activeCategory === 'All' || e.category === activeCategory
     const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) || e.category.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
   })
+
+  const openAddModal = () => {
+    setForm({ name: '', category: 'Cameras', status: 'Available', assignedTo: '', location: '', returnDate: '' })
+    setShowModal(true)
+  }
+
+  const handleSave = () => {
+    if (!form.name.trim()) return
+    addEquipment({
+      id: 0, name: form.name, category: form.category, status: form.status,
+      assignedTo: form.assignedTo, location: form.location, returnDate: form.returnDate,
+    })
+    setShowModal(false)
+  }
+
+  const handleDelete = (id: number) => {
+    if (confirm('Delete this equipment item?')) deleteEquipment(id)
+  }
+
+  const openAssignModal = (name: string) => {
+    setAssignItem(name)
+    setAssignForm({ assignedTo: '', location: '' })
+    setShowAssignModal(true)
+  }
+
+  const handleAssign = () => {
+    const item = equipment.find(e => e.name === assignItem)
+    if (item) {
+      updateEquipment(item.id, { assignedTo: assignForm.assignedTo, location: assignForm.location, status: 'In Use' })
+    }
+    setShowAssignModal(false)
+  }
+
+  const handleExport = () => {
+    const csv = 'Name,Category,Status,Assigned To,Location\n' + equipment.map(e => `${e.name},${e.category},${e.status},${e.assignedTo},${e.location}`).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'equipment.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-6">
@@ -67,8 +98,8 @@ export function ManagerEquipment() {
           <p className="text-slate-500">Track gear, availability, and assignments.</p>
         </div>
         <div className="flex gap-3">
-          <button className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Export</button>
-          <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={handleExport} className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Export</button>
+          <button onClick={openAddModal} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Equipment
           </button>
         </div>
@@ -125,11 +156,14 @@ export function ManagerEquipment() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">{item.category}</span>
-                  <span className="text-xs text-slate-400 truncate ml-2">{item.assigned}</span>
+                  <span className="text-xs text-slate-400 truncate ml-2">{item.assignedTo}{item.location ? ` - ${item.location}` : ''}</span>
                 </div>
-                <button className="mt-3 w-full border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-                  <Plus className="w-3.5 h-3.5" /> Assign Equipment
-                </button>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => openAssignModal(item.name)} className="flex-1 border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+                    <Plus className="w-3.5 h-3.5" /> Assign Equipment
+                  </button>
+                  <button onClick={() => handleDelete(item.id)} className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1.5 opacity-0 group-hover:opacity-100">Delete</button>
+                </div>
               </div>
             </div>
           ))}
@@ -143,6 +177,66 @@ export function ManagerEquipment() {
           </div>
         )}
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Add Equipment</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Equipment name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="Available">Available</option>
+                  <option value="In Use">In Use</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Assign Equipment: {assignItem}</h3>
+              <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                <input type="text" value={assignForm.assignedTo} onChange={e => setAssignForm(f => ({ ...f, assignedTo: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Person or project" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <input type="text" value={assignForm.location} onChange={e => setAssignForm(f => ({ ...f, location: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Location" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowAssignModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleAssign} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Assign</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,8 +10,11 @@ import {
   AlertCircle,
   Eye,
   Download,
+  Plus,
+  X,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 const tabs = [
   { id: 'scripts', label: 'Scripts', icon: FileText },
@@ -22,27 +25,23 @@ const tabs = [
   { id: 'permits', label: 'Permits', icon: FileBadge },
 ]
 
-const scripts = [
-  { id: 1, title: 'Nike Summer Campaign V3', project: 'Nike Summer Campaign', writer: 'Elena R.', status: 'Approved', updated: '2 hours ago' },
-  { id: 2, title: 'TechCorp Launch Script', project: 'TechCorp Launch', writer: 'Marcus C.', status: 'Draft', updated: '1 day ago' },
-  { id: 3, title: 'Spotify Documentary Draft', project: 'Spotify Spotlight', writer: 'Sarah J.', status: 'Draft', updated: '3 days ago' },
-  { id: 4, title: 'Local Coffee Brand Story', project: 'Local Coffee', writer: 'Elena R.', status: 'Approved', updated: '5 days ago' },
-  { id: 5, title: 'Adidas Winter Promo V2', project: 'Adidas Winter Promo', writer: 'David K.', status: 'Draft', updated: '1 week ago' },
-]
+const tabAddLabel: Record<string, string> = {
+  scripts: 'New Script',
+  storyboards: 'New Storyboard',
+  shotlists: 'New Shot List',
+  locations: 'New Location',
+  talent: 'New Talent',
+  permits: 'New Permit',
+}
 
-const storyboards = [
-  { id: 1, title: 'Nike Summer - Scene 1-5', project: 'Nike Summer Campaign', scenes: 12, status: 'Complete' },
-  { id: 2, title: 'TechCorp Launch Storyboard', project: 'TechCorp Launch', scenes: 8, status: 'In Progress' },
-  { id: 3, title: 'Spotify Opening Sequence', project: 'Spotify Spotlight', scenes: 6, status: 'Pending' },
-  { id: 4, title: 'Local Coffee Montage', project: 'Local Coffee', scenes: 4, status: 'Complete' },
-]
-
-const shotLists = [
-  { id: 1, project: 'Nike Summer Campaign', scenes: '1-15', setups: 45, status: 'Finalized' },
-  { id: 2, project: 'TechCorp Launch', scenes: '1-8', setups: 22, status: 'In Progress' },
-  { id: 3, project: 'Spotify Spotlight', scenes: '1-6', setups: 18, status: 'Draft' },
-  { id: 4, project: 'Local Coffee', scenes: '1-4', setups: 10, status: 'Finalized' },
-]
+const tabAddIcon: Record<string, React.ElementType> = {
+  scripts: FileText,
+  storyboards: Image,
+  shotlists: List,
+  locations: MapPin,
+  talent: Users,
+  permits: FileBadge,
+}
 
 const locations = [
   { id: 1, name: 'Downtown Studio A', address: '123 Main St, LA', contact: 'Jenny (555-0101)', status: 'Booked', project: 'Nike Summer' },
@@ -58,15 +57,40 @@ const talent = [
   { id: 4, name: 'Sophie Chen', role: 'Extra', project: 'Nike Summer', contact: 'sophie@email.com', status: 'On Hold' },
 ]
 
-const permits = [
-  { id: 1, type: 'Filming Permit', location: 'Downtown Studio A', status: 'Approved', expiry: '2026-07-15' },
-  { id: 2, type: 'Park Filming', location: 'Riverside Park', status: 'Pending', expiry: '2026-06-30' },
-  { id: 3, type: 'Drone License', location: 'Sunset Warehouse', status: 'Approved', expiry: '2026-08-01' },
-  { id: 4, type: 'Street Closure', location: 'Main Street', status: 'Expired', expiry: '2026-05-01' },
-]
-
 export function ManagerProductionPlanning() {
   const [activeTab, setActiveTab] = useState('scripts')
+  const [showModal, setShowModal] = useState(false)
+  const [form, setForm] = useState({ title: '', project: '', status: 'Draft', assignee: '' })
+  const { scripts, addScript, updateScript, deleteScript, storyboards, addStoryboard, updateStoryboard, deleteStoryboard, shotLists, addShotList, updateShotList, deleteShotList, permits, addPermit, updatePermit, deletePermit } = useStore()
+
+  const handleDelete = (id: number, type: string) => {
+    if (!confirm(`Delete this ${type}?`)) return
+    const actions: Record<string, (id: number) => void> = {
+      scripts: deleteScript, storyboards: deleteStoryboard, shotlists: deleteShotList, permits: deletePermit,
+    }
+    actions[type]?.(id)
+  }
+
+  const openAddModal = () => {
+    setForm({ title: '', project: '', status: 'Draft', assignee: '' })
+    setShowModal(true)
+  }
+
+  const handleSave = () => {
+    if (!form.title.trim()) return
+    const addActions: Record<string, (item: any) => void> = {
+      scripts: addScript, storyboards: addStoryboard, shotlists: addShotList, permits: addPermit,
+    }
+    addActions[activeTab]?.({
+      id: 0, title: form.title, project: form.project, status: form.status,
+      assignee: form.assignee, lastUpdated: 'Just now',
+    })
+    setShowModal(false)
+  }
+
+  const currentData: Record<string, any[]> = { scripts, storyboards, shotlists: shotLists, permits }
+  const items = activeTab === 'locations' ? locations : activeTab === 'talent' ? talent : currentData[activeTab] || []
+  const AddIcon = tabAddIcon[activeTab]
 
   const renderTable = () => {
     switch (activeTab) {
@@ -88,15 +112,15 @@ export function ManagerProductionPlanning() {
                 <tr key={s.id} className="text-sm hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4 font-medium text-slate-900">{s.title}</td>
                   <td className="py-3 pr-4 text-slate-600">{s.project}</td>
-                  <td className="py-3 pr-4 text-slate-600">{s.writer}</td>
+                  <td className="py-3 pr-4 text-slate-600">{s.assignee}</td>
                   <td className="py-3 pr-4">
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', s.status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>{s.status}</span>
                   </td>
-                  <td className="py-3 pr-4 text-slate-500">{s.updated}</td>
+                  <td className="py-3 pr-4 text-slate-500">{s.lastUpdated}</td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
-                      <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
+                      <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                      <button onClick={() => alert(`Downloading: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -112,8 +136,8 @@ export function ManagerProductionPlanning() {
                 <th className="pb-3 pr-4">Preview</th>
                 <th className="pb-3 pr-4">Title</th>
                 <th className="pb-3 pr-4">Project</th>
-                <th className="pb-3 pr-4">Scenes</th>
                 <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3 pr-4">Assignee</th>
                 <th className="pb-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -125,12 +149,12 @@ export function ManagerProductionPlanning() {
                   </td>
                   <td className="py-3 pr-4 font-medium text-slate-900">{s.title}</td>
                   <td className="py-3 pr-4 text-slate-600">{s.project}</td>
-                  <td className="py-3 pr-4 text-slate-600">{s.scenes} scenes</td>
                   <td className="py-3 pr-4">
-                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', s.status === 'Complete' ? 'bg-emerald-50 text-emerald-700' : s.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600')}>{s.status}</span>
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', s.status === 'Complete' || s.status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : s.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600')}>{s.status}</span>
                   </td>
+                  <td className="py-3 pr-4 text-slate-600">{s.assignee}</td>
                   <td className="py-3 text-right">
-                    <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -142,24 +166,26 @@ export function ManagerProductionPlanning() {
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="pb-3 pr-4">Title</th>
                 <th className="pb-3 pr-4">Project</th>
-                <th className="pb-3 pr-4">Scenes</th>
-                <th className="pb-3 pr-4">Setups</th>
                 <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3 pr-4">Assignee</th>
+                <th className="pb-3 pr-4">Updated</th>
                 <th className="pb-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {shotLists.map((s) => (
                 <tr key={s.id} className="text-sm hover:bg-slate-50 transition-colors">
-                  <td className="py-3 pr-4 font-medium text-slate-900">{s.project}</td>
-                  <td className="py-3 pr-4 text-slate-600">Scenes {s.scenes}</td>
-                  <td className="py-3 pr-4 text-slate-600">{s.setups} setups</td>
+                  <td className="py-3 pr-4 font-medium text-slate-900">{s.title}</td>
+                  <td className="py-3 pr-4 text-slate-600">{s.project}</td>
                   <td className="py-3 pr-4">
-                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', s.status === 'Finalized' ? 'bg-emerald-50 text-emerald-700' : s.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')}>{s.status}</span>
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', s.status === 'Finalized' || s.status === 'Complete' ? 'bg-emerald-50 text-emerald-700' : s.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')}>{s.status}</span>
                   </td>
+                  <td className="py-3 pr-4 text-slate-600">{s.assignee}</td>
+                  <td className="py-3 pr-4 text-slate-500">{s.lastUpdated}</td>
                   <td className="py-3 text-right">
-                    <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -243,14 +269,14 @@ export function ManagerProductionPlanning() {
             <tbody className="divide-y divide-slate-100">
               {permits.map((p) => (
                 <tr key={p.id} className="text-sm hover:bg-slate-50 transition-colors">
-                  <td className="py-3 pr-4 font-medium text-slate-900">{p.type}</td>
-                  <td className="py-3 pr-4 text-slate-600">{p.location}</td>
+                  <td className="py-3 pr-4 font-medium text-slate-900">{p.title}</td>
+                  <td className="py-3 pr-4 text-slate-600">{p.project}</td>
                   <td className="py-3 pr-4">
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', p.status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : p.status === 'Pending' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>{p.status}</span>
                   </td>
-                  <td className={cn('py-3 pr-4', new Date(p.expiry) < new Date() ? 'text-rose-600 font-medium' : 'text-slate-600')}>{p.expiry}</td>
+                  <td className={cn('py-3 pr-4 text-slate-600')}>{p.lastUpdated}</td>
                   <td className="py-3 text-right">
-                    <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
+                    <button onClick={() => alert(`Downloading: ${p.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -262,6 +288,12 @@ export function ManagerProductionPlanning() {
     }
   }
 
+  const getItemCount = () => {
+    if (activeTab === 'locations') return locations.length
+    if (activeTab === 'talent') return talent.length
+    return currentData[activeTab]?.length || 0
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -269,30 +301,32 @@ export function ManagerProductionPlanning() {
           <h2 className="text-2xl font-bold text-slate-900">Production Planning</h2>
           <p className="text-slate-500">Manage scripts, storyboards, locations, and more.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-          <FileText className="w-4 h-4" /> New Script
-        </button>
+        {'scripts storyboards shotlists permits'.split(' ').includes(activeTab) && (
+          <button onClick={openAddModal} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+            <AddIcon className="w-4 h-4" /> {tabAddLabel[activeTab]}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><FileText className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">8</p>
+            <p className="text-2xl font-bold text-slate-900">{scripts.length}</p>
             <p className="text-sm text-slate-500">Active Scripts</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><AlertCircle className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">3</p>
+            <p className="text-2xl font-bold text-slate-900">{permits.filter(p => p.status === 'Pending').length}</p>
             <p className="text-sm text-slate-500">Pending Permits</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><MapPin className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">6</p>
+            <p className="text-2xl font-bold text-slate-900">{locations.filter(l => l.status === 'Booked').length}</p>
             <p className="text-sm text-slate-500">Locations Booked</p>
           </div>
         </div>
@@ -326,12 +360,50 @@ export function ManagerProductionPlanning() {
               <input type="text" placeholder="Search..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970] w-64" />
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span><strong className="text-slate-900">{scripts.length}</strong> items</span>
+              <span><strong className="text-slate-900">{getItemCount()}</strong> items</span>
             </div>
           </div>
           <div className="overflow-x-auto">{renderTable()}</div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">{tabAddLabel[activeTab]}</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter title" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                <input type="text" value={form.project} onChange={e => setForm(f => ({ ...f, project: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter project" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="Draft">Draft</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Complete">Complete</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Assignee</label>
+                <input type="text" value={form.assignee} onChange={e => setForm(f => ({ ...f, assignee: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter assignee" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

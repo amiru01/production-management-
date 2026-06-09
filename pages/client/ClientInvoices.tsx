@@ -11,6 +11,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 interface Invoice {
   id: string
@@ -21,15 +22,6 @@ interface Invoice {
   status: 'Paid' | 'Overdue' | 'Pending' | 'Draft'
   description: string
 }
-
-const invoices: Invoice[] = [
-  { id: 'INV-2024-001', project: 'Summer Campaign 2024', date: 'Oct 01, 2024', dueDate: 'Oct 31, 2024', amount: 22500, status: 'Pending', description: 'Production phase 1 - Principal photography and initial editing.' },
-  { id: 'INV-2024-002', project: 'Social Media Shorts', date: 'Sep 15, 2024', dueDate: 'Oct 15, 2024', amount: 8500, status: 'Overdue', description: 'Pre-production services including storyboarding and location scouting.' },
-  { id: 'INV-2024-003', project: 'Summer Campaign 2024', date: 'Aug 01, 2024', dueDate: 'Aug 31, 2024', amount: 15000, status: 'Paid', description: 'Pre-production deposit for creative development.' },
-  { id: 'INV-2024-004', project: 'Product Launch Video', date: 'Jul 15, 2024', dueDate: 'Aug 14, 2024', amount: 12000, status: 'Paid', description: 'Full production services for product launch video.' },
-  { id: 'INV-2024-005', project: 'Brand Documentary', date: 'Sep 30, 2024', dueDate: 'Oct 30, 2024', amount: 32000, status: 'Pending', description: 'Final payment for documentary production and delivery.' },
-  { id: 'INV-2024-006', project: 'Holiday Campaign 2024', date: 'Oct 10, 2024', dueDate: 'Nov 09, 2024', amount: 5500, status: 'Pending', description: 'Initial creative brief and concept development retainer.' },
-]
 
 const statusColor: Record<string, string> = {
   Paid: 'bg-emerald-50 text-emerald-700',
@@ -50,14 +42,25 @@ function formatCurrency(amount: number): string {
 }
 
 export function ClientInvoices() {
+  const { invoices: storeInvoices, updateInvoice } = useStore()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
   }
 
+  const invoices: Invoice[] = storeInvoices.map(inv => ({
+    id: inv.id,
+    project: inv.client,
+    date: inv.date,
+    dueDate: inv.dueDate,
+    amount: inv.amount,
+    status: (inv.status === 'Paid' || inv.status === 'Overdue' || inv.status === 'Pending' ? inv.status : 'Pending') as 'Paid' | 'Overdue' | 'Pending' | 'Draft',
+    description: inv.items,
+  }))
+
   const handlePayNow = (inv: Invoice) => {
-    alert(`Proceeding to payment for ${inv.id} - ${formatCurrency(inv.amount)}`)
+    updateInvoice(inv.id, { status: 'Paid' })
   }
 
   const handleDownload = (inv: Invoice) => {

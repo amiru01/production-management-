@@ -11,33 +11,22 @@ import {
   Camera,
   CheckCircle2,
   AlertCircle,
+  X,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 const today = new Date()
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-const events = [
-  { id: 1, date: 8, title: 'Nike Summer - Studio Shoot', project: 'Nike Summer Campaign', location: 'Studio A', crew: 8, time: '8:00 AM - 6:00 PM', status: 'Confirmed' },
-  { id: 2, date: 8, title: 'TechCorp Location Scout', project: 'TechCorp Launch', location: 'Riverside Park', crew: 3, time: '10:00 AM - 12:00 PM', status: 'Tentative' },
-  { id: 3, date: 9, title: 'Spotify Spotlight - Interview', project: 'Spotify Spotlight', location: 'Warehouse', crew: 5, time: '9:00 AM - 3:00 PM', status: 'Confirmed' },
-  { id: 4, date: 10, title: 'Local Coffee - Product Shoot', project: 'Local Coffee', location: 'Coffee Shop', crew: 4, time: '11:00 AM - 5:00 PM', status: 'Confirmed' },
-  { id: 5, date: 12, title: 'Adidas Winter Promo Prep', project: 'Adidas Winter Promo', location: 'Studio B', crew: 2, time: '1:00 PM - 4:00 PM', status: 'Tentative' },
-  { id: 6, date: 15, title: 'Nike Summer - Final Day', project: 'Nike Summer Campaign', location: 'Studio A', crew: 10, time: '7:00 AM - 8:00 PM', status: 'Confirmed' },
-]
-
-const scheduleTable = [
-  { date: 'Jun 8', project: 'Nike Summer Campaign', location: 'Studio A', crew: 'Elena R., David K., Mike T., +5', status: 'Shooting Today' },
-  { date: 'Jun 9', project: 'Spotify Spotlight', location: 'Sunset Warehouse', crew: 'Sarah J., Marcus C., +3', status: 'Scheduled' },
-  { date: 'Jun 10', project: 'Local Coffee', location: 'Coffee Shop Interior', crew: 'Elena R., Tom S., +2', status: 'Scheduled' },
-  { date: 'Jun 12', project: 'Adidas Winter Promo', location: 'Studio B', crew: 'David K., Anna P.', status: 'Pending' },
-  { date: 'Jun 15', project: 'Nike Summer Campaign', location: 'Studio A', crew: 'Full Team (10)', status: 'Confirmed' },
-]
-
 export function ManagerScheduling() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
+  const [showModal, setShowModal] = useState(false)
+  const [showCallSheet, setShowCallSheet] = useState(false)
+  const [form, setForm] = useState({ date: today.getDate(), title: '', project: '', location: '', crew: '', time: '', status: 'Tentative' })
+  const { scheduleEvents, addScheduleEvent, updateScheduleEvent, deleteScheduleEvent } = useStore()
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay()
@@ -60,6 +49,32 @@ export function ManagerScheduling() {
     }
   }
 
+  const todayEvents = scheduleEvents.filter(e => e.date === today.getDate())
+  const thisWeekEvents = scheduleEvents.filter(e => e.date >= today.getDate() && e.date <= today.getDate() + 7)
+  const crewToday = todayEvents.reduce((sum, e) => sum + (typeof e.crew === 'number' ? e.crew : 0), 0)
+
+  const openAddModal = (day?: number) => {
+    setForm({ date: day || today.getDate(), title: '', project: '', location: '', crew: '', time: '', status: 'Tentative' })
+    setShowModal(true)
+  }
+
+  const handleSave = () => {
+    if (!form.title.trim()) return
+    addScheduleEvent({
+      id: 0, date: form.date, title: form.title, project: form.project, location: form.location,
+      crew: form.crew ? parseInt(form.crew) || form.crew : 1, time: form.time, status: form.status,
+    })
+    setShowModal(false)
+  }
+
+  const scheduleTable = scheduleEvents.filter(e => e.date >= today.getDate()).slice(0, 5).map(e => ({
+    date: `${monthNames[currentMonth].slice(0, 3)} ${e.date}`,
+    project: e.project,
+    location: e.location,
+    crew: typeof e.crew === 'number' ? `${e.crew} crew` : String(e.crew),
+    status: e.status === 'Confirmed' ? 'Confirmed' : 'Scheduled',
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -68,10 +83,10 @@ export function ManagerScheduling() {
           <p className="text-slate-500">Calendar and timeline for upcoming shoots and events.</p>
         </div>
         <div className="flex gap-3">
-          <button className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={() => setShowCallSheet(true)} className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <FileText className="w-4 h-4" /> Call Sheet
           </button>
-          <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={() => openAddModal()} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <Plus className="w-4 h-4" /> Create Schedule
           </button>
         </div>
@@ -81,21 +96,21 @@ export function ManagerScheduling() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><Camera className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">2</p>
+            <p className="text-2xl font-bold text-slate-900">{todayEvents.length}</p>
             <p className="text-sm text-slate-500">Today's Shoots</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><Calendar className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">5</p>
+            <p className="text-2xl font-bold text-slate-900">{thisWeekEvents.length}</p>
             <p className="text-sm text-slate-500">This Week</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><Users className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">11</p>
+            <p className="text-2xl font-bold text-slate-900">{crewToday}</p>
             <p className="text-sm text-slate-500">Crew Assigned Today</p>
           </div>
         </div>
@@ -119,10 +134,10 @@ export function ManagerScheduling() {
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1
-              const dayEvents = events.filter((e) => e.date === day)
+              const dayEvents = scheduleEvents.filter((e) => e.date === day)
               const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
               return (
-                <div key={day} className={cn('h-20 p-1 border border-slate-100 rounded-lg overflow-hidden', isToday && 'bg-[#191970]/5 border-[#191970]/30')}>
+                <div key={day} onClick={() => openAddModal(day)} className={cn('h-20 p-1 border border-slate-100 rounded-lg overflow-hidden cursor-pointer hover:border-slate-300 transition-colors', isToday && 'bg-[#191970]/5 border-[#191970]/30')}>
                   <div className={cn('text-xs font-medium mb-1', isToday ? 'text-[#191970]' : 'text-slate-600')}>{day}</div>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 2).map((event) => (
@@ -140,10 +155,10 @@ export function ManagerScheduling() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-slate-500" /> Today's Schedule</h3>
             <div className="space-y-3">
-              {events.filter((e) => e.date === today.getDate()).length === 0 ? (
+              {todayEvents.length === 0 ? (
                 <p className="text-sm text-slate-400 py-4 text-center">No events scheduled for today.</p>
               ) : (
-                events.filter((e) => e.date === today.getDate() || (e.date >= today.getDate() && e.date <= today.getDate() + 2)).slice(0, 4).map((event) => (
+                todayEvents.slice(0, 4).map((event) => (
                   <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
                     <div className={cn('p-1.5 rounded-lg mt-0.5', event.status === 'Confirmed' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600')}>
                       {event.status === 'Confirmed' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
@@ -186,7 +201,7 @@ export function ManagerScheduling() {
                       <td className="py-3 pr-4 text-slate-600">{row.location}</td>
                       <td className="py-3 pr-4 text-slate-600">{row.crew}</td>
                       <td className="py-3 text-right">
-                        <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', row.status === 'Shooting Today' ? 'bg-blue-50 text-blue-700' : row.status === 'Scheduled' ? 'bg-emerald-50 text-emerald-700' : row.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700')}>{row.status}</span>
+                        <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', row.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700')}>{row.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -196,6 +211,81 @@ export function ManagerScheduling() {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Create Schedule Event</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date (day of month)</label>
+                <input type="number" value={form.date} onChange={e => setForm(f => ({ ...f, date: parseInt(e.target.value) || 1 }))} min={1} max={31} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Event title" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                <input type="text" value={form.project} onChange={e => setForm(f => ({ ...f, project: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Project name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <input type="text" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Location" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Crew Count</label>
+                <input type="text" value={form.crew} onChange={e => setForm(f => ({ ...f, crew: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Number of crew" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                <input type="text" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="e.g. 8:00 AM - 6:00 PM" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Tentative">Tentative</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCallSheet && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Call Sheet - {today.toLocaleDateString()}</h3>
+              <button onClick={() => setShowCallSheet(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            {todayEvents.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4">No events scheduled for today.</p>
+            ) : (
+              <div className="space-y-3">
+                {todayEvents.map(event => (
+                  <div key={event.id} className="p-4 rounded-lg border border-slate-200">
+                    <div className="font-semibold text-slate-900">{event.title}</div>
+                    <div className="text-sm text-slate-600 mt-1">{event.project} &middot; {event.location} &middot; {event.time}</div>
+                    <div className="text-sm text-slate-500 mt-1">Crew: {event.crew}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowCallSheet(false)} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

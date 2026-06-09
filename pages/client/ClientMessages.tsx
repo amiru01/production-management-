@@ -12,6 +12,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 interface Message {
   id: number
@@ -35,78 +36,6 @@ interface Contact {
   messages: Message[]
 }
 
-const conversations: Contact[] = [
-  {
-    id: 1,
-    name: 'Sarah Chen',
-    role: 'Producer',
-    avatar: 'SC',
-    project: 'All Projects',
-    lastMessage: 'Sounds good, I\'ll have the rough cut ready by Friday.',
-    time: '2m ago',
-    unread: 2,
-    online: true,
-    messages: [
-      { id: 1, sender: 'contact', text: 'Hi Nike team! Just checking in on the Summer Campaign. The edit is coming along nicely.', time: '10:32 AM' },
-      { id: 2, sender: 'me', text: 'Great to hear! Can you share a preview of the rough cut?', time: '10:35 AM' },
-      { id: 3, sender: 'contact', text: 'Absolutely. We\'re finalizing the color grade today and should have it ready for review.', time: '10:38 AM' },
-      { id: 4, sender: 'me', text: 'Perfect. Let us know when it\'s available.', time: '10:40 AM' },
-      { id: 5, sender: 'contact', text: 'Will do! Also wanted to mention we found a great location for the beach scene. I\'ll send over the scouting photos.', time: '10:42 AM' },
-      { id: 6, sender: 'me', text: 'Excellent! Please do send them over.', time: '10:45 AM' },
-      { id: 7, sender: 'contact', text: 'Sounds good, I\'ll have the rough cut ready by Friday.', time: '10:47 AM', status: 'read' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Marcus Lee',
-    role: 'Project Manager',
-    avatar: 'ML',
-    project: 'Summer Campaign 2024',
-    lastMessage: 'Updated the timeline. Can you take a look?',
-    time: '1h ago',
-    unread: 0,
-    online: true,
-    messages: [
-      { id: 1, sender: 'contact', text: 'Good morning! I\'ve updated the production schedule for the Summer Campaign.', time: '9:00 AM' },
-      { id: 2, sender: 'contact', text: 'We shifted the shoot dates by a week to accommodate the location booking.', time: '9:02 AM' },
-      { id: 3, sender: 'me', text: 'That works for us. What does the revised timeline look like?', time: '9:15 AM' },
-      { id: 4, sender: 'contact', text: 'Updated the timeline. Can you take a look?', time: '9:20 AM', status: 'read' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Lisa Wang',
-    role: 'Accountant',
-    avatar: 'LW',
-    project: 'Billing',
-    lastMessage: 'Invoice INV-2024-005 is ready for review.',
-    time: '3h ago',
-    unread: 1,
-    online: false,
-    messages: [
-      { id: 1, sender: 'contact', text: 'Hello! I\'ve prepared the final invoice for the Brand Documentary project.', time: '2:00 PM' },
-      { id: 2, sender: 'contact', text: 'Invoice INV-2024-005 is ready for review.', time: '2:02 PM' },
-      { id: 3, sender: 'me', text: 'Thanks Lisa, I\'ll take a look.', time: '2:30 PM', status: 'read' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Jake Torres',
-    role: 'Editor',
-    avatar: 'JT',
-    project: 'Social Media Shorts',
-    lastMessage: 'Here are the first draft edits for review.',
-    time: '1d ago',
-    unread: 0,
-    online: false,
-    messages: [
-      { id: 1, sender: 'contact', text: 'Hey! I\'ve finished cutting the first batch of social media shorts.', time: '11:00 AM' },
-      { id: 2, sender: 'contact', text: 'Here are the first draft edits for review.', time: '11:05 AM', attachment: { name: 'social_shorts_draft.mp4', size: '245 MB' } },
-      { id: 3, sender: 'me', text: 'Awesome, we\'ll review the drafts.', time: '11:30 AM', status: 'read' },
-    ],
-  },
-]
-
 const roleIcon: Record<string, React.ReactNode> = {
   Producer: <Briefcase className="w-3.5 h-3.5" />,
   'Project Manager': <Building className="w-3.5 h-3.5" />,
@@ -115,10 +44,30 @@ const roleIcon: Record<string, React.ReactNode> = {
 }
 
 export function ClientMessages() {
-  const [activeContactId, setActiveContactId] = useState<number>(conversations[0].id)
+  const { conversations: storeConversations, sendMessage: storeSendMessage } = useStore()
   const [messageInput, setMessageInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
+  const conversations: Contact[] = storeConversations.map(c => ({
+    id: c.id,
+    name: c.name,
+    role: c.role,
+    avatar: c.avatar,
+    project: 'All Projects',
+    lastMessage: c.lastMessage,
+    time: c.time,
+    unread: c.unread,
+    online: c.online,
+    messages: c.messages.map(m => ({
+      id: m.id,
+      sender: m.isMe ? 'me' as const : 'contact' as const,
+      text: m.text,
+      time: m.time,
+      status: (m.isMe ? 'sent' : undefined) as 'sent' | undefined,
+    })),
+  }))
+
+  const [activeContactId, setActiveContactId] = useState<number>(conversations[0]?.id || 0)
   const activeContact = conversations.find((c) => c.id === activeContactId)
 
   const filteredConversations = conversations.filter((c) =>
@@ -127,7 +76,7 @@ export function ClientMessages() {
 
   const handleSend = () => {
     if (!messageInput.trim() || !activeContact) return
-    alert(`Message sent to ${activeContact.name}: "${messageInput}"`)
+    storeSendMessage(activeContact.id, messageInput)
     setMessageInput('')
   }
 

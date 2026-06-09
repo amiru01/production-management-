@@ -6,38 +6,62 @@ import {
   Mail,
   CheckCircle2,
   AlertCircle,
+  X,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 const roles = ['All Roles', 'Director', 'DP', 'Editor', 'Sound', 'Producer', 'Gaffer', 'PA']
-
-const teamMembers = [
-  { id: 1, name: 'Elena R.', role: 'Director', project: 'Nike Summer Campaign', status: 'On Set', tasks: 3, availability: 20, contact: 'elena@prod.com' },
-  { id: 2, name: 'David K.', role: 'DP', project: 'Available', status: 'Available', tasks: 0, availability: 100, contact: 'david@prod.com' },
-  { id: 3, name: 'Sarah J.', role: 'Editor', project: 'Local Coffee', status: 'Editing', tasks: 5, availability: 40, contact: 'sarah@prod.com' },
-  { id: 4, name: 'Mike T.', role: 'Sound', project: 'Nike Summer Campaign', status: 'On Set', tasks: 2, availability: 60, contact: 'mike@prod.com' },
-  { id: 5, name: 'Marcus C.', role: 'Producer', project: 'TechCorp Launch', status: 'On Leave', tasks: 0, availability: 0, contact: 'marcus@prod.com' },
-  { id: 6, name: 'Anna P.', role: 'Gaffer', project: 'Spotify Spotlight', status: 'Available', tasks: 1, availability: 85, contact: 'anna@prod.com' },
-  { id: 7, name: 'Tom S.', role: 'PA', project: 'Nike Summer Campaign', status: 'On Set', tasks: 6, availability: 15, contact: 'tom@prod.com' },
-  { id: 8, name: 'Lisa M.', role: 'Editor', project: 'Adidas Winter Promo', status: 'Available', tasks: 2, availability: 70, contact: 'lisa@prod.com' },
-]
-
-const statCards = [
-  { label: 'Total Team', value: '12', color: 'bg-blue-50 text-blue-600', icon: Users },
-  { label: 'On Set', value: '4', color: 'bg-emerald-50 text-emerald-600', icon: CheckCircle2 },
-  { label: 'Available', value: '3', color: 'bg-indigo-50 text-indigo-600', icon: Users },
-  { label: 'On Leave', value: '1', color: 'bg-amber-50 text-amber-600', icon: AlertCircle },
-]
 
 export function ManagerTeam() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('All Roles')
+  const [showModal, setShowModal] = useState(false)
+  const [showTaskModal, setShowTaskModal] = useState(false)
+  const [taskMember, setTaskMember] = useState('')
+  const [form, setForm] = useState({ name: '', role: '', project: '', status: 'Available', contact: '', tasks: 0, availability: 100 })
+  const [taskForm, setTaskForm] = useState({ title: '', description: '' })
+  const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember } = useStore()
+
+  const statCards = [
+    { label: 'Total Team', value: String(teamMembers.length), color: 'bg-blue-50 text-blue-600', icon: Users },
+    { label: 'On Set', value: String(teamMembers.filter(m => m.status === 'On Set').length), color: 'bg-emerald-50 text-emerald-600', icon: CheckCircle2 },
+    { label: 'Available', value: String(teamMembers.filter(m => m.status === 'Available').length), color: 'bg-indigo-50 text-indigo-600', icon: Users },
+    { label: 'On Leave', value: String(teamMembers.filter(m => m.status === 'On Leave').length), color: 'bg-amber-50 text-amber-600', icon: AlertCircle },
+  ]
 
   const filtered = teamMembers.filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.role.toLowerCase().includes(search.toLowerCase())
     const matchesRole = roleFilter === 'All Roles' || m.role === roleFilter
     return matchesSearch && matchesRole
   })
+
+  const openAddModal = () => {
+    setForm({ name: '', role: '', project: '', status: 'Available', contact: '', tasks: 0, availability: 100 })
+    setShowModal(true)
+  }
+
+  const handleSave = () => {
+    if (!form.name.trim()) return
+    addTeamMember({ id: 0, name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
+    setShowModal(false)
+  }
+
+  const handleDelete = (id: number) => {
+    if (confirm('Delete this team member?')) deleteTeamMember(id)
+  }
+
+  const openTaskModal = (name: string) => {
+    setTaskMember(name)
+    setTaskForm({ title: '', description: '' })
+    setShowTaskModal(true)
+  }
+
+  const handleTaskSave = () => {
+    if (!taskForm.title.trim()) return
+    alert(`Task "${taskForm.title}" assigned to ${taskMember}`)
+    setShowTaskModal(false)
+  }
 
   return (
     <div className="space-y-6">
@@ -46,7 +70,7 @@ export function ManagerTeam() {
           <h2 className="text-2xl font-bold text-slate-900">Team Management</h2>
           <p className="text-slate-500">Manage crew, assignments, and availability.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+        <button onClick={openAddModal} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
           <Plus className="w-4 h-4" /> Add Member
         </button>
       </div>
@@ -138,9 +162,12 @@ export function ManagerTeam() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5 ml-auto">
-                      <Plus className="w-3.5 h-3.5" /> Assign Task
-                    </button>
+                    <div className="flex items-center gap-2 justify-end">
+                      <button onClick={() => openTaskModal(member.name)} className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" /> Assign Task
+                      </button>
+                      <button onClick={() => handleDelete(member.id)} className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -148,6 +175,69 @@ export function ManagerTeam() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Add Team Member</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                <input type="text" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter role" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contact</label>
+                <input type="text" value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter email" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="Available">Available</option>
+                  <option value="On Set">On Set</option>
+                  <option value="Editing">Editing</option>
+                  <option value="On Leave">On Leave</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTaskModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Assign Task to {taskMember}</h3>
+              <button onClick={() => setShowTaskModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Task Title</label>
+                <input type="text" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter task title" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea value={taskForm.description} onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970] h-20" placeholder="Enter description" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleTaskSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Assign</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

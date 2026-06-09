@@ -35,7 +35,7 @@ interface Deliverable {
   revisions: Revision[]
 }
 
-const deliverables: Deliverable[] = [
+const initialDeliverables: Deliverable[] = [
   {
     id: 1,
     name: 'Rough Cut - Summer Campaign',
@@ -146,6 +146,7 @@ const statusIcon: Record<string, React.ReactNode> = {
 }
 
 export function ClientDeliverables() {
+  const [deliverables, setDeliverables] = useState<Deliverable[]>(initialDeliverables)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [commentText, setCommentText] = useState('')
   const [showCommentField, setShowCommentField] = useState<number | null>(null)
@@ -170,7 +171,11 @@ export function ClientDeliverables() {
   }
 
   const handleApprove = (id: number) => {
-    alert(`Deliverable #${id} approved${commentText ? ' with comment.' : '.'}`)
+    setDeliverables(prev => prev.map(d => {
+      if (d.id !== id) return d
+      const newRevision: Revision = { version: `V${d.revisions.length + 1}`, status: 'Approved', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), notes: commentText || 'Approved' }
+      return { ...d, status: 'Approved', version: `V${d.revisions.length + 1}`, revisions: [...d.revisions, newRevision] }
+    }))
     setExpandedId(null)
     setCommentText('')
     setShowCommentField(null)
@@ -178,10 +183,13 @@ export function ClientDeliverables() {
 
   const handleReject = (id: number) => {
     if (!commentText.trim()) {
-      alert('Please provide a comment explaining what needs revision.')
       return
     }
-    alert(`Deliverable #${id} sent back for revision with your feedback.`)
+    setDeliverables(prev => prev.map(d => {
+      if (d.id !== id) return d
+      const newRevision: Revision = { version: `V${d.revisions.length + 1}`, status: 'Needs Revision', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), notes: commentText }
+      return { ...d, status: 'Needs Revision', version: `V${d.revisions.length + 1}`, revisions: [...d.revisions, newRevision] }
+    }))
     setExpandedId(null)
     setCommentText('')
     setShowCommentField(null)

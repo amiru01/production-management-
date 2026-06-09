@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Search,
   Plus,
@@ -23,26 +23,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { cn } from '../../utils'
-
-const payments = [
-  { id: 'PAY-001', invoice: 'INV-2023-089', client: 'Nike', amount: '$22,500.00', method: 'Bank Transfer', date: 'Oct 15, 2023', status: 'Completed' },
-  { id: 'PAY-002', invoice: 'INV-2023-090', client: 'TechCorp', amount: '$14,000.00', method: 'Credit Card', date: 'Oct 18, 2023', status: 'Pending' },
-  { id: 'PAY-003', invoice: 'INV-2023-092', client: 'Adidas', amount: '$18,000.00', method: 'Credit Card', date: 'Oct 20, 2023', status: 'Completed' },
-  { id: 'PAY-004', invoice: 'INV-2023-085', client: 'Spotify', amount: '$32,500.00', method: 'Bank Transfer', date: 'Sep 29, 2023', status: 'Failed' },
-  { id: 'PAY-005', invoice: 'INV-2023-093', client: 'Starbucks', amount: '$6,750.00', method: 'Check', date: 'Oct 22, 2023', status: 'Pending' },
-  { id: 'PAY-006', invoice: 'INV-2023-086', client: 'Local Coffee', amount: '$4,250.00', method: 'Credit Card', date: 'Oct 12, 2023', status: 'Completed' },
-  { id: 'PAY-007', invoice: 'INV-2023-094', client: 'Nike', amount: '$12,800.00', method: 'Bank Transfer', date: 'Oct 25, 2023', status: 'Completed' },
-  { id: 'PAY-008', invoice: 'INV-2023-095', client: 'Apple', amount: '$45,000.00', method: 'Bank Transfer', date: 'Oct 28, 2023', status: 'Pending' },
-]
-
-const paymentTrend = [
-  { month: 'May', completed: 45000, failed: 2000 },
-  { month: 'Jun', completed: 52000, failed: 1500 },
-  { month: 'Jul', completed: 48000, failed: 3000 },
-  { month: 'Aug', completed: 61000, failed: 1000 },
-  { month: 'Sep', completed: 58000, failed: 2500 },
-  { month: 'Oct', completed: 78000, failed: 3500 },
-]
+import { useStore, type Payment } from '../../store/AppStore'
 
 const statusStyles: Record<string, { icon: any; color: string; bg: string }> = {
   Completed: { icon: CheckCircle2, color: 'text-emerald-700', bg: 'bg-emerald-50' },
@@ -52,22 +33,92 @@ const statusStyles: Record<string, { icon: any; color: string; bg: string }> = {
 
 const methodIcons: Record<string, any> = {
   'Bank Transfer': Banknote,
+  'Wire Transfer': Banknote,
   'Credit Card': CreditCard,
   'Check': DollarSign,
 }
 
+const methods = ['Bank Transfer', 'Wire Transfer', 'Credit Card', 'Check']
+const statuses = ['Completed', 'Pending', 'Failed']
+
 export function AccountantPayments() {
+  const { payments, addPayment, updatePayment } = useStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
+  const [formData, setFormData] = useState({ invoice: '', client: '', amount: 0, date: '', method: 'Bank Transfer', status: 'Pending' })
+  const [dropdownId, setDropdownId] = useState<string | null>(null)
 
-  const filtered = payments.filter((p) => {
-    const matchesSearch =
-      p.id.toLowerCase().includes(search.toLowerCase()) ||
-      p.client.toLowerCase().includes(search.toLowerCase()) ||
-      p.invoice.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = statusFilter === 'All' || p.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filtered = useMemo(() => {
+    return payments.filter((p) => {
+      const matchesSearch =
+        p.id.toLowerCase().includes(search.toLowerCase()) ||
+        p.client.toLowerCase().includes(search.toLowerCase()) ||
+        p.invoice.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === 'All' || p.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [payments, search, statusFilter])
+
+  const totalReceived = useMemo(() =>
+    payments.filter(p => p.status === 'Completed').reduce((s, p) => s + p.amount, 0), [payments])
+
+  const totalPending = useMemo(() =>
+    payments.filter(p => p.status === 'Pending').reduce((s, p) => s + p.amount, 0), [payments])
+
+  const totalFailed = useMemo(() =>
+    payments.filter(p => p.status === 'Failed').reduce((s, p) => s + p.amount, 0), [payments])
+
+  const pendingCount = useMemo(() =>
+    payments.filter(p => p.status === 'Pending').length, [payments])
+
+  const failedCount = useMemo(() =>
+    payments.filter(p => p.status === 'Failed').length, [payments])
+
+  const paymentTrend = useMemo(() => {
+    const months = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
+    const perMonth = Math.max(Math.round(totalReceived / 6), 1000)
+    const perFailed = Math.max(Math.round(totalFailed / 6), 500)
+    return months.map((month, idx) => ({
+      month,
+      completed: perMonth + idx * 3000 + Math.round(Math.sin(idx * 1.2) * 2000),
+      failed: perFailed + idx * 200 + Math.round(Math.cos(idx) * 300),
+    }))
+  }, [totalReceived, totalFailed])
+
+  const handleNew = () => {
+    setEditingPayment(null)
+    setFormData({ invoice: '', client: '', amount: 0, date: new Date().toISOString().split('T')[0], method: 'Bank Transfer', status: 'Pending' })
+    setModalOpen(true)
+  }
+
+  const handleEdit = (pay: Payment) => {
+    setEditingPayment(pay)
+    setFormData({ invoice: pay.invoice, client: pay.client, amount: pay.amount, date: pay.date, method: pay.method, status: pay.status })
+    setDropdownId(null)
+    setModalOpen(true)
+  }
+
+  const handleSave = () => {
+    if (editingPayment) {
+      updatePayment(editingPayment.id, formData)
+    } else {
+      addPayment({ ...formData, id: 'PAY-' + Date.now() })
+    }
+    setModalOpen(false)
+  }
+
+  const handleExport = () => {
+    const rows = [['Payment ID', 'Invoice ID', 'Client', 'Amount', 'Method', 'Date', 'Status']]
+    filtered.forEach(p => rows.push([p.id, p.invoice, p.client, String(p.amount), p.method, p.date, p.status]))
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'payments.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-6">
@@ -77,10 +128,10 @@ export function AccountantPayments() {
           <p className="text-slate-500">Track incoming payments and payment statuses.</p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={handleExport} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <Download className="w-4 h-4" /> Export
           </button>
-          <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={handleNew} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <Plus className="w-4 h-4" /> Record Payment
           </button>
         </div>
@@ -92,7 +143,7 @@ export function AccountantPayments() {
             <span className="text-sm text-slate-500">Total Received (MTD)</span>
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-bold text-slate-900">$78,050.00</div>
+          <div className="text-2xl font-bold text-slate-900">${totalReceived.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
           <div className="text-xs text-emerald-600 font-medium mt-1">+12% vs last month</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -100,16 +151,16 @@ export function AccountantPayments() {
             <span className="text-sm text-slate-500">Pending</span>
             <Clock className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-bold text-amber-600">$59,750.00</div>
-          <div className="text-xs text-slate-500 font-medium mt-1">3 payments awaiting confirmation</div>
+          <div className="text-2xl font-bold text-amber-600">${totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="text-xs text-slate-500 font-medium mt-1">{pendingCount} payments awaiting confirmation</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-slate-500">Failed</span>
             <XCircle className="w-4 h-4 text-rose-600" />
           </div>
-          <div className="text-2xl font-bold text-rose-600">$32,500.00</div>
-          <div className="text-xs text-red-600 font-medium mt-1">1 payment requires attention</div>
+          <div className="text-2xl font-bold text-rose-600">${totalFailed.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="text-xs text-red-600 font-medium mt-1">{failedCount} payment{failedCount !== 1 ? 's' : ''} requires attention</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-1">
@@ -193,7 +244,7 @@ export function AccountantPayments() {
                     </td>
                     <td className="p-4 text-sm text-slate-600">{pay.invoice}</td>
                     <td className="p-4 font-medium text-slate-900 text-sm">{pay.client}</td>
-                    <td className="p-4 font-medium text-slate-900">{pay.amount}</td>
+                    <td className="p-4 font-medium text-slate-900">${pay.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-1.5 text-sm text-slate-600">
                         {MethodIcon && <MethodIcon className="w-3.5 h-3.5 text-slate-400" />}
@@ -206,10 +257,18 @@ export function AccountantPayments() {
                         <StatusIcon className="w-3.5 h-3.5" /> {pay.status}
                       </div>
                     </td>
-                    <td className="p-4 text-right">
-                      <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                    <td className="p-4 text-right relative">
+                      <button
+                        onClick={() => setDropdownId(dropdownId === pay.id ? null : pay.id)}
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      >
                         <MoreVertical className="w-5 h-5" />
                       </button>
+                      {dropdownId === pay.id && (
+                        <div className="absolute right-4 top-12 z-10 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                          <button onClick={() => handleEdit(pay)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Edit</button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -233,6 +292,60 @@ export function AccountantPayments() {
           </div>
         </div>
       </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{editingPayment ? 'Edit Payment' : 'Record Payment'}</h3>
+            <div className="space-y-4">
+              <input
+                placeholder="Invoice ID"
+                value={formData.invoice}
+                onChange={e => setFormData({ ...formData, invoice: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+              <input
+                placeholder="Client"
+                value={formData.client}
+                onChange={e => setFormData({ ...formData, client: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+              <input
+                type="number"
+                placeholder="Amount"
+                value={formData.amount}
+                onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+              <input
+                type="date"
+                placeholder="Date"
+                value={formData.date}
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+              <select
+                value={formData.method}
+                onChange={e => setFormData({ ...formData, method: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              >
+                {methods.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select
+                value={formData.status}
+                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              >
+                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSave} className="px-4 py-2 bg-[#191970] text-white rounded-lg text-sm hover:bg-[#121258]">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

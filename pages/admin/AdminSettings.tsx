@@ -10,6 +10,7 @@ import {
   Smartphone,
   Clock,
   Upload,
+  CheckCircle2,
 } from 'lucide-react'
 import { cn } from '../../utils'
 
@@ -25,6 +26,32 @@ const tabIcons: Record<TabType, any> = {
 
 export function AdminSettings() {
   const [activeTab, setActiveTab] = useState<TabType>('Company')
+  const [saved, setSaved] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState([
+    { id: 1, brand: 'Visa', last4: '4242', expires: '12/2027' },
+  ])
+
+  const handleSave = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleLogoUpload = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg,image/svg+xml'
+    input.click()
+  }
+
+  const handleRemovePayment = (id: number) => {
+    if (confirm('Are you sure you want to remove this payment method?')) {
+      setPaymentMethods(prev => prev.filter(p => p.id !== id))
+    }
+  }
+
+  const handleAddPayment = () => {
+    alert('Add payment method form would open here.')
+  }
 
   return (
     <div className="space-y-6">
@@ -56,7 +83,7 @@ export function AdminSettings() {
                 <div>
                   <p className="text-sm font-medium text-slate-900 mb-1">Company Logo</p>
                   <p className="text-xs text-slate-500 mb-3">PNG, JPG or SVG. 500x500px recommended.</p>
-                  <button className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                  <button onClick={handleLogoUpload} className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <Upload className="w-4 h-4" />
                     Upload Logo
                   </button>
@@ -103,9 +130,9 @@ export function AdminSettings() {
               </div>
 
               <div className="pt-4 border-t border-slate-200 flex justify-end">
-                <button className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                <button onClick={handleSave} className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+                  {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {saved ? 'Saved!' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -145,9 +172,9 @@ export function AdminSettings() {
               </div>
 
               <div className="pt-4 border-t border-slate-200 flex justify-end">
-                <button className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                <button onClick={handleSave} className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+                  {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {saved ? 'Saved!' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -211,9 +238,9 @@ export function AdminSettings() {
               </div>
 
               <div className="pt-4 border-t border-slate-200 flex justify-end">
-                <button className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                <button onClick={handleSave} className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+                  {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {saved ? 'Saved!' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -238,17 +265,19 @@ export function AdminSettings() {
               <div className="pt-6 border-t border-slate-200">
                 <h4 className="text-base font-semibold text-slate-900 mb-1">Payment Methods</h4>
                 <p className="text-sm text-slate-500 mb-4">Manage your payment methods.</p>
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="w-5 h-5 text-slate-500" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Visa ending in 4242</p>
-                      <p className="text-xs text-slate-500">Expires 12/2027</p>
+                {paymentMethods.map((pm) => (
+                  <div key={pm.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 mb-3">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-slate-500" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{pm.brand} ending in {pm.last4}</p>
+                        <p className="text-xs text-slate-500">Expires {pm.expires}</p>
+                      </div>
                     </div>
+                    <button onClick={() => handleRemovePayment(pm.id)} className="text-sm font-medium text-rose-600 hover:text-rose-700">Remove</button>
                   </div>
-                  <button className="text-sm font-medium text-rose-600 hover:text-rose-700">Remove</button>
-                </div>
-                <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700">+ Add payment method</button>
+                ))}
+                <button onClick={handleAddPayment} className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700">+ Add payment method</button>
               </div>
 
               <div className="pt-6 border-t border-slate-200">
@@ -269,9 +298,9 @@ export function AdminSettings() {
               </div>
 
               <div className="pt-4 border-t border-slate-200 flex justify-end">
-                <button className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                <button onClick={handleSave} className="bg-[#191970] hover:bg-[#121258] text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+                  {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {saved ? 'Saved!' : 'Save Changes'}
                 </button>
               </div>
             </div>

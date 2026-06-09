@@ -10,35 +10,14 @@ import {
   ChevronRight,
   Download,
   Briefcase,
+  Plus,
+  X,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-interface ScheduleEvent {
-  id: number
-  title: string
-  project: string
-  location: string
-  day: string
-  time: string
-  type: 'shoot' | 'meeting' | 'review'
-}
+import { useStore } from '../../store/AppStore'
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-const allEvents: ScheduleEvent[] = [
-  { id: 1, title: 'Studio Shoot - Day 1', project: 'TechCorp Launch', location: 'Studio A', day: 'Mon', time: '08:00 - 17:00', type: 'shoot' },
-  { id: 2, title: 'Pre-pro Meeting', project: 'Spotify Spotlight', location: 'Conference Room B', day: 'Mon', time: '14:00 - 15:00', type: 'meeting' },
-  { id: 3, title: 'Location Scout', project: 'Nike Summer Campaign', location: 'Downtown NYC', day: 'Tue', time: '09:00 - 12:00', type: 'shoot' },
-  { id: 4, title: 'Rough Cut Review', project: 'Local Coffee', location: 'Edit Bay 3', day: 'Tue', time: '15:00 - 16:30', type: 'review' },
-  { id: 5, title: 'B-Roll Shoot', project: 'Nike Summer Campaign', location: 'Brooklyn Bridge Park', day: 'Wed', time: '07:00 - 11:00', type: 'shoot' },
-  { id: 6, title: 'Client Check-in', project: 'Adidas Winter Promo', location: 'Zoom Call', day: 'Wed', time: '13:00 - 14:00', type: 'meeting' },
-  { id: 7, title: 'Color Grade Session', project: 'TechCorp Launch', location: 'Edit Bay 1', day: 'Thu', time: '10:00 - 16:00', type: 'review' },
-  { id: 8, title: 'Equipment Return', project: 'Nike Summer Campaign', location: 'Gear Room', day: 'Thu', time: '17:00 - 17:30', type: 'meeting' },
-  { id: 9, title: 'Sound Mix Review', project: 'Spotify Spotlight', location: 'Audio Suite', day: 'Fri', time: '11:00 - 12:30', type: 'review' },
-  { id: 10, title: 'Wrap Meeting', project: 'TechCorp Launch', location: 'Main Office', day: 'Fri', time: '16:00 - 17:00', type: 'meeting' },
-]
-
-const nextEvent = allEvents[0]
 
 const typeStyles: Record<string, { icon: any; bg: string; dot: string }> = {
   shoot: { icon: Video, bg: 'bg-blue-50 border-blue-200', dot: 'bg-blue-500' },
@@ -46,8 +25,51 @@ const typeStyles: Record<string, { icon: any; bg: string; dot: string }> = {
   review: { icon: FileText, bg: 'bg-amber-50 border-amber-200', dot: 'bg-amber-500' },
 }
 
+function getDayName(dateNum: number): string {
+  const now = new Date()
+  const d = new Date(now.getFullYear(), now.getMonth(), dateNum)
+  return weekDays[d.getDay()]
+}
+
 export function CrewSchedule() {
+  const { scheduleEvents, addScheduleEvent, deleteScheduleEvent } = useStore()
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newEventForm, setNewEventForm] = useState({ title: '', project: '', location: '', day: 'Mon', time: '', type: 'shoot' })
+
+  const mappedEvents = scheduleEvents.map(e => ({
+    id: e.id,
+    title: e.title,
+    project: e.project,
+    location: e.location,
+    day: getDayName(e.date),
+    time: e.time,
+    type: 'shoot' as const,
+  }))
+
+  const nextEvent = mappedEvents[0]
+  const todayDayName = weekDays[new Date().getDay()]
+
+  const handleAddEvent = () => {
+    if (!newEventForm.title.trim()) return
+    addScheduleEvent({
+      title: newEventForm.title,
+      project: newEventForm.project || 'General',
+      location: newEventForm.location || 'TBD',
+      date: 15 + currentWeekOffset,
+      crew: 1,
+      time: newEventForm.time || 'TBD',
+      status: 'Tentative'
+    })
+    setNewEventForm({ title: '', project: '', location: '', day: 'Mon', time: '', type: 'shoot' })
+    setShowAddModal(false)
+  }
+
+  const handleDelete = (id: number) => {
+    if (confirm('Delete this event?')) {
+      deleteScheduleEvent(id)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -56,9 +78,14 @@ export function CrewSchedule() {
           <h2 className="text-2xl font-bold text-slate-900">My Schedule</h2>
           <p className="text-slate-500">Weekly calendar and upcoming events.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-          <Download className="w-4 h-4" /> Download Call Sheet
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => alert('Call sheet downloaded as PDF.')} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+            <Download className="w-4 h-4" /> Download Call Sheet
+          </button>
+          <button onClick={() => setShowAddModal(true)} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Event
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -67,14 +94,14 @@ export function CrewSchedule() {
             <span className="text-sm text-slate-500">Today's Events</span>
             <CalendarIcon className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-2xl font-bold text-slate-900">{allEvents.filter(e => e.day === weekDays[new Date().getDay()]).length || 2}</div>
+          <div className="text-2xl font-bold text-slate-900">{mappedEvents.filter(e => e.day === todayDayName).length || 0}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-slate-500">This Week</span>
             <Briefcase className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-2xl font-bold text-blue-600">{allEvents.length}</div>
+          <div className="text-2xl font-bold text-blue-600">{mappedEvents.length}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-1">
@@ -82,7 +109,7 @@ export function CrewSchedule() {
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
           <div className="text-2xl font-bold text-amber-600">2h 15m</div>
-          <div className="text-xs text-slate-400 mt-0.5">{nextEvent.title}</div>
+          <div className="text-xs text-slate-400 mt-0.5">{nextEvent?.title || 'No events'}</div>
         </div>
       </div>
 
@@ -97,7 +124,7 @@ export function CrewSchedule() {
         </div>
         <div className="grid grid-cols-7 divide-x divide-slate-200 min-h-[280px]">
           {weekDays.map((day) => {
-            const dayEvents = allEvents.filter(e => e.day === day)
+            const dayEvents = mappedEvents.filter(e => e.day === day)
             return (
               <div key={day} className="flex flex-col">
                 <div className="p-2 text-center border-b border-slate-100 bg-slate-50/30">
@@ -109,7 +136,7 @@ export function CrewSchedule() {
                     const style = typeStyles[event.type]
                     const Icon = style.icon
                     return (
-                      <div key={event.id} className={cn('text-xs p-2 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow', style.bg)}>
+                      <div key={event.id} className={cn('text-xs p-2 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow group relative', style.bg)}>
                         <div className="flex items-center gap-1 mb-1">
                           <Icon className="w-3 h-3 text-slate-500 shrink-0" />
                           <span className="font-medium text-slate-700 truncate">{event.title}</span>
@@ -117,6 +144,9 @@ export function CrewSchedule() {
                         <div className="text-slate-500 truncate flex items-center gap-1">
                           <Clock className="w-3 h-3 shrink-0" /> {event.time}
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(event.id) }} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete">
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     )
                   })}
@@ -132,11 +162,11 @@ export function CrewSchedule() {
           <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-600" /> Upcoming Events</h3>
         </div>
         <div className="divide-y divide-slate-100">
-          {allEvents.map((event) => {
+          {mappedEvents.map((event) => {
             const style = typeStyles[event.type]
             const Icon = style.icon
             return (
-              <div key={event.id} className="p-4 hover:bg-slate-50 transition-colors flex items-start gap-4">
+              <div key={event.id} className="p-4 hover:bg-slate-50 transition-colors flex items-start gap-4 group">
                 <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', style.bg.replace('border', 'border-0'))}>
                   <Icon className="w-4 h-4 text-slate-600" />
                 </div>
@@ -151,11 +181,53 @@ export function CrewSchedule() {
                   <div className="text-sm font-medium text-slate-900">{event.time}</div>
                   <div className="text-xs text-slate-400">{event.day}</div>
                 </div>
+                <button onClick={() => handleDelete(event.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             )
           })}
         </div>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Add New Event</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <input type="text" value={newEventForm.title} onChange={e => setNewEventForm(f => ({ ...f, title: e.target.value }))} placeholder="Event title" className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                <input type="text" value={newEventForm.project} onChange={e => setNewEventForm(f => ({ ...f, project: e.target.value }))} placeholder="Project name" className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <input type="text" value={newEventForm.location} onChange={e => setNewEventForm(f => ({ ...f, location: e.target.value }))} placeholder="Location" className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Day</label>
+                <select value={newEventForm.day} onChange={e => setNewEventForm(f => ({ ...f, day: e.target.value }))} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  {weekDays.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                <input type="text" value={newEventForm.time} onChange={e => setNewEventForm(f => ({ ...f, time: e.target.value }))} placeholder="e.g. 9:00 AM - 5:00 PM" className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 mt-4">
+              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={handleAddEvent} disabled={!newEventForm.title.trim()} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] rounded-lg hover:bg-[#121258] transition-colors disabled:opacity-50">Add Event</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

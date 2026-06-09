@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CheckSquare,
   Calendar as CalendarIcon,
@@ -10,31 +11,38 @@ import {
   PlayCircle,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-const todayTasks = [
-  { id: 1, title: 'Shoot B-Roll at Downtown Location', project: 'Nike Summer Campaign', time: '09:00 AM - 12:00 PM', status: 'In Progress', type: 'shoot' },
-  { id: 2, title: 'Upload footage to Asset Library', project: 'Nike Summer Campaign', time: '01:00 PM', status: 'Pending', type: 'upload' },
-  { id: 3, title: 'Review rough cut with Director', project: 'Local Coffee', time: '03:30 PM', status: 'Pending', type: 'review' },
-]
-
-const upcomingSchedule = [
-  { date: 'Tomorrow', title: 'Studio Shoot - Day 1', project: 'TechCorp Launch', location: 'Studio A' },
-  { date: 'Oct 18', title: 'Wrap Party', project: 'Nike Summer Campaign', location: 'Main Office' },
-  { date: 'Oct 20', title: 'Pre-pro Meeting', project: 'Spotify Spotlight', location: 'Conference Room B' },
-]
-
-const assignedEquipment = [
-  { item: 'RED V-Raptor', project: 'Nike Summer', returnDate: 'Oct 18' },
-  { item: 'Cooke Lenses Set', project: 'Nike Summer', returnDate: 'Oct 18' },
-  { item: 'Teradek Bolt 4K', project: 'Nike Summer', returnDate: 'Oct 18' },
-]
-
-const recentFeedback = [
-  { project: 'Local Coffee', from: 'Director', comment: 'Color grading looks great, just warm up the final shot a bit.', time: '1 hour ago' },
-  { project: 'Adidas Promo', from: 'Client', comment: 'Can we swap the music track in the second half?', time: '3 hours ago' },
-]
+import { useStore } from '../../store/AppStore'
 
 export function CrewDashboard() {
+  const navigate = useNavigate()
+  const { tasks, scheduleEvents, equipment } = useStore()
+
+  const todayTasks = tasks.filter(t => t.status !== 'Completed').slice(0, 3).map(t => ({
+    id: t.id,
+    title: t.title,
+    project: t.project,
+    time: t.dueDate,
+    status: t.status === 'In Progress' ? 'In Progress' : 'Pending'
+  }))
+
+  const upcomingSchedule = scheduleEvents.slice(0, 3).map(e => ({
+    date: e.date === 8 ? 'Tomorrow' : `Oct ${e.date}`,
+    title: e.title,
+    project: e.project,
+    location: e.location
+  }))
+
+  const assignedEquipment = equipment.filter(e => e.status === 'In Use').slice(0, 3).map(e => ({
+    item: e.name,
+    project: e.location,
+    returnDate: e.returnDate
+  }))
+
+  const recentFeedback = [
+    { project: 'Local Coffee', from: 'Director', comment: 'Color grading looks great, just warm up the final shot a bit.', time: '1 hour ago' },
+    { project: 'Adidas Promo', from: 'Client', comment: 'Can we swap the music track in the second half?', time: '3 hours ago' },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -43,10 +51,10 @@ export function CrewDashboard() {
           <p className="text-slate-500">Here's your schedule and tasks for today.</p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={() => navigate('/crew/assets')} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <UploadCloud className="w-4 h-4" /> Upload Assets
           </button>
-          <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Clock In</button>
+          <button onClick={() => alert('Clocked in! Your shift has been logged.')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Clock In</button>
         </div>
       </div>
 
@@ -55,7 +63,7 @@ export function CrewDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2"><CheckSquare className="w-4 h-4 text-emerald-600" /> Today's Tasks</h3>
-              <span className="text-sm text-slate-500 font-medium">3 Remaining</span>
+              <span className="text-sm text-slate-500 font-medium">{tasks.filter(t => t.status !== 'Completed').length} Remaining</span>
             </div>
             <div className="divide-y divide-slate-100">
               {todayTasks.map((task) => (
@@ -79,7 +87,7 @@ export function CrewDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-emerald-600" /> Upcoming Schedule</h3>
-              <button className="text-sm text-emerald-600 font-medium hover:text-emerald-700">View Calendar</button>
+              <button onClick={() => navigate('/crew/schedule')} className="text-sm text-emerald-600 font-medium hover:text-emerald-700">View Calendar</button>
             </div>
             <div className="p-4 space-y-4">
               {upcomingSchedule.map((event, i) => (
@@ -138,7 +146,7 @@ export function CrewDashboard() {
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
             <h3 className="font-semibold text-lg mb-2 relative z-10">Review Dailies</h3>
             <p className="text-slate-300 text-sm mb-4 relative z-10">New footage available for Nike Summer Campaign.</p>
-            <button className="w-full bg-white text-slate-900 hover:bg-slate-100 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 relative z-10">
+            <button onClick={() => navigate('/crew/assets')} className="w-full bg-white text-slate-900 hover:bg-slate-100 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 relative z-10">
               <PlayCircle className="w-4 h-4" /> Watch Now
             </button>
           </div>

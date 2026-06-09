@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Video,
   Calendar as CalendarIcon,
@@ -10,26 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-const activeProductions = [
-  { id: 1, name: 'Nike Summer Campaign', phase: 'Shooting', progress: 65, team: 8, daysLeft: 3 },
-  { id: 2, name: 'TechCorp Launch', phase: 'Pre-Production', progress: 25, team: 4, daysLeft: 12 },
-  { id: 3, name: 'Spotify Spotlight', phase: 'Planning', progress: 10, team: 2, daysLeft: 28 },
-]
-
-const teamAvailability = [
-  { name: 'Elena R.', role: 'Director', status: 'On Set', project: 'Nike Summer' },
-  { name: 'David K.', role: 'DP', status: 'Available', project: '-' },
-  { name: 'Sarah J.', role: 'Editor', status: 'Editing', project: 'Local Coffee' },
-  { name: 'Mike T.', role: 'Sound', status: 'On Set', project: 'Nike Summer' },
-]
-
-const equipmentStatus = [
-  { item: 'RED V-Raptor', status: 'In Use', location: 'Studio A' },
-  { item: 'ARRI Alexa Mini', status: 'Available', location: 'Gear Room' },
-  { item: 'Cooke Lenses Set', status: 'In Use', location: 'Studio A' },
-  { item: 'DJI Ronin 4D', status: 'Maintenance', location: 'Repair Shop' },
-]
+import { useStore } from '../../store/AppStore'
 
 const recentActivity = [
   { id: 1, user: 'Elena R.', action: 'uploaded new storyboard for', project: 'TechCorp Launch', time: '2 hours ago', isAlert: false },
@@ -38,7 +20,46 @@ const recentActivity = [
   { id: 4, user: 'Marcus C.', action: 'approved call sheet for', project: 'Nike Summer', time: '1 day ago', isAlert: false },
 ]
 
+const statusToPhase: Record<string, string> = {
+  Planning: 'Planning',
+  'Pre-Production': 'Pre-Production',
+  'In Production': 'Shooting',
+  'Post-Production': 'Post-Production',
+  Completed: 'Delivered',
+}
+
 export function ManagerDashboard() {
+  const navigate = useNavigate()
+  const { projects, teamMembers, equipment } = useStore()
+
+  const activeProductions = projects.filter(p => p.status !== 'Completed').map(p => {
+    const teamSize = teamMembers.filter(m =>
+      p.name.toLowerCase().includes(m.project.toLowerCase().split(' ')[0]) ||
+      m.project.toLowerCase().includes(p.name.toLowerCase().split(' ')[0])
+    ).length
+    return {
+      id: p.id,
+      name: p.name,
+      phase: statusToPhase[p.status] || p.status,
+      progress: p.progress,
+      team: Math.max(teamSize, 1),
+      daysLeft: Math.max(1, Math.floor((100 - p.progress) / 8)),
+    }
+  })
+
+  const teamAvailability = teamMembers.map(m => ({
+    name: m.name,
+    role: m.role,
+    status: m.status,
+    project: m.project,
+  }))
+
+  const equipmentStatus = equipment.map(e => ({
+    item: e.name,
+    status: e.status,
+    location: e.location,
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -46,7 +67,7 @@ export function ManagerDashboard() {
           <h2 className="text-2xl font-bold text-slate-900">Production Overview</h2>
           <p className="text-slate-500">Track active projects, team, and equipment.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">New Project</button>
+        <button onClick={() => navigate('/manager/projects')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">New Project</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -99,7 +120,7 @@ export function ManagerDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Users className="w-4 h-4 text-slate-500" /> Team Availability</h3>
-              <button className="text-sm text-blue-600 font-medium hover:text-blue-700">Manage</button>
+              <button onClick={() => navigate('/manager/team')} className="text-sm text-blue-600 font-medium hover:text-blue-700">Manage</button>
             </div>
             <div className="divide-y divide-slate-100">
               {teamAvailability.map((member, i) => (
@@ -125,7 +146,7 @@ export function ManagerDashboard() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Camera className="w-4 h-4 text-slate-500" /> Equipment Status</h3>
-              <button className="text-sm text-blue-600 font-medium hover:text-blue-700">Inventory</button>
+              <button onClick={() => navigate('/manager/equipment')} className="text-sm text-blue-600 font-medium hover:text-blue-700">Inventory</button>
             </div>
             <div className="divide-y divide-slate-100">
               {equipmentStatus.map((eq, i) => (

@@ -11,8 +11,10 @@ import {
   Send,
   Download,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
 type FileStatus = 'Uploading' | 'Uploaded' | 'Failed'
 type FileType = 'Video' | 'Audio' | 'Photo' | 'Document'
@@ -31,15 +33,6 @@ interface AssetFile {
   feedback?: { from: string; comment: string; date: string }[]
 }
 
-const initialFiles: AssetFile[] = [
-  { id: 1, name: 'Nike_Summer_BRoll_01.mp4', type: 'Video', project: 'Nike Summer Campaign', uploadedAt: 'Oct 12, 2023', status: 'Uploaded', size: '2.4 GB', version: 1, feedbackStatus: 'Approved', feedback: [{ from: 'Director', comment: 'Great coverage, love the lighting.', date: 'Oct 13' }] },
-  { id: 2, name: 'TechCorp_Launch_Interview.wav', type: 'Audio', project: 'TechCorp Launch', uploadedAt: 'Oct 11, 2023', status: 'Uploaded', size: '845 MB', version: 2, feedbackStatus: 'Needs Revision', feedback: [{ from: 'Client', comment: 'Please re-record the intro, audio levels are off.', date: 'Oct 12' }] },
-  { id: 3, name: 'LocalCoffee_BehindScenes.jpg', type: 'Photo', project: 'Local Coffee', uploadedAt: 'Oct 10, 2023', status: 'Uploaded', size: '12 MB', version: 1, feedbackStatus: 'Pending Review' },
-  { id: 4, name: 'Adidas_Promo_Storyboard.pdf', type: 'Document', project: 'Adidas Winter Promo', uploadedAt: 'Oct 09, 2023', status: 'Uploaded', size: '4.2 MB', version: 3, feedbackStatus: 'Approved', feedback: [{ from: 'Manager', comment: 'Final version looks solid. Proceed.', date: 'Oct 10' }] },
-  { id: 5, name: 'Spotify_Spotlight_BTS.mp4', type: 'Video', project: 'Spotify Spotlight', uploadedAt: 'Oct 08, 2023', status: 'Failed', size: '1.8 GB', version: 1, feedbackStatus: 'Pending Review' },
-  { id: 6, name: 'Nike_Summer_Aerials.mp4', type: 'Video', project: 'Nike Summer Campaign', uploadedAt: 'Oct 07, 2023', status: 'Uploaded', size: '3.1 GB', version: 2, feedbackStatus: 'Needs Revision', feedback: [{ from: 'Director', comment: 'Add more dynamic shots of the city skyline.', date: 'Oct 09' }] },
-]
-
 const fileTypeIcons: Record<FileType, any> = {
   Video: FileVideo,
   Audio: FileAudio,
@@ -56,18 +49,40 @@ const feedbackStatusStyles: Record<FeedbackStatus, { icon: any; color: string; b
 const fileTypeFilters: FileType[] = ['Video', 'Audio', 'Photo', 'Document']
 
 export function CrewAssets() {
-  const [files, setFiles] = useState<AssetFile[]>(initialFiles)
+  const { assets: storeAssets, addAsset, deleteAsset } = useStore()
+
+  const [files, setFiles] = useState<AssetFile[]>(() => {
+    const allFiles: AssetFile[] = []
+    Object.entries(storeAssets).forEach(([, fileList]) => {
+      fileList.forEach(f => {
+        allFiles.push({
+          id: Date.now() + Math.random(),
+          name: f.name,
+          type: f.type as FileType,
+          project: f.project,
+          uploadedAt: f.date,
+          status: 'Uploaded' as FileStatus,
+          size: f.size,
+          version: 1,
+          feedbackStatus: 'Pending Review' as FeedbackStatus,
+        })
+      })
+    })
+    return allFiles
+  })
+
   const [dragOver, setDragOver] = useState(false)
   const [typeFilter, setTypeFilter] = useState<FileType | 'All'>('All')
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
 
-  const simulateUpload = (name: string) => {
+  const uploadFile = (name: string, type: FileType = 'Video', project: string = 'Nike Summer Campaign') => {
     setUploadingFile(name)
+    addAsset('footage', { name, type, project, uploadedBy: 'You', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 MB' })
     const newFile: AssetFile = {
       id: Date.now(),
       name,
-      type: 'Video' as FileType,
-      project: 'Nike Summer Campaign',
+      type,
+      project,
       uploadedAt: 'Just now',
       status: 'Uploading',
       size: '0 MB',
@@ -79,6 +94,13 @@ export function CrewAssets() {
       setFiles(prev => prev.map(f => f.id === newFile.id ? { ...f, status: 'Uploaded' as FileStatus, size: '1.2 GB' } : f))
       setUploadingFile(null)
     }, 2500)
+  }
+
+  const handleDelete = (file: AssetFile) => {
+    if (!confirm('Delete this file?')) return
+    const folder = Object.entries(storeAssets).find(([, fl]) => fl.some(f => f.name === file.name))?.[0] || 'footage'
+    deleteAsset(folder, file.name)
+    setFiles(prev => prev.filter(f => f.id !== file.id))
   }
 
   const incrementVersion = (id: number) => {
@@ -141,12 +163,12 @@ export function CrewAssets() {
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); simulateUpload('Dropped_File.mp4') }}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); uploadFile('Dropped_File.mp4') }}
         className={cn(
           'border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer',
           dragOver ? 'border-emerald-400 bg-emerald-50/50' : 'border-slate-300 hover:border-slate-400 bg-white'
         )}
-        onClick={() => simulateUpload('New_Upload_Asset.mp4')}
+        onClick={() => uploadFile('New_Upload_Asset.mp4')}
       >
         <UploadCloud className={cn('w-10 h-10 mx-auto mb-3 transition-colors', dragOver ? 'text-emerald-500' : 'text-slate-400')} />
         <p className="text-sm font-medium text-slate-700 mb-1">Drag & drop files here, or click to browse</p>
@@ -268,8 +290,11 @@ export function CrewAssets() {
                             <button onClick={() => submitForReview(file.id)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Submit for Review">
                               <Send className="w-4 h-4" />
                             </button>
-                            <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download">
+                            <button onClick={() => alert(`Downloading ${file.name}...`)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download">
                               <Download className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDelete(file)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </>
                         )}

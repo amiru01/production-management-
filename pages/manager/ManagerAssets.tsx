@@ -14,51 +14,18 @@ import {
   HardDrive,
   Clock,
   BarChart3,
+  X,
 } from 'lucide-react'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
-const folders = [
-  { id: 'footage', label: 'Footage', icon: FileVideo, count: 128, size: '256 GB', color: 'bg-blue-50 text-blue-600 border-blue-200' },
-  { id: 'photos', label: 'Photos', icon: FileImage, count: 342, size: '48 GB', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-  { id: 'audio', label: 'Audio', icon: FileAudio, count: 89, size: '12 GB', color: 'bg-purple-50 text-purple-600 border-purple-200' },
-  { id: 'graphics', label: 'Graphics', icon: FileImage, count: 56, size: '8 GB', color: 'bg-amber-50 text-amber-600 border-amber-200' },
-  { id: 'documents', label: 'Documents', icon: FileText, count: 34, size: '256 MB', color: 'bg-rose-50 text-rose-600 border-rose-200' },
-  { id: 'edits', label: 'Edits', icon: Film, count: 21, size: '420 GB', color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
-]
-
-const fileData: Record<string, Array<{ name: string; type: string; project: string; uploadedBy: string; date: string; size: string }>> = {
-  footage: [
-    { name: 'Nike_Shoot_Day1.mov', type: 'Video', project: 'Nike Summer', uploadedBy: 'Elena R.', date: 'Jun 5', size: '24.5 GB' },
-    { name: 'Nike_Shoot_Day2.mov', type: 'Video', project: 'Nike Summer', uploadedBy: 'David K.', date: 'Jun 6', size: '31.2 GB' },
-    { name: 'TechCorp_Broll.mp4', type: 'Video', project: 'TechCorp Launch', uploadedBy: 'Sarah J.', date: 'Jun 3', size: '8.7 GB' },
-    { name: 'Spotify_Interview_ProRes.mov', type: 'Video', project: 'Spotify Spotlight', uploadedBy: 'Mike T.', date: 'Jun 1', size: '45.0 GB' },
-    { name: 'LocalCoffee_A_Roll.mp4', type: 'Video', project: 'Local Coffee', uploadedBy: 'Elena R.', date: 'May 28', size: '12.3 GB' },
-  ],
-  photos: [
-    { name: 'Nike_Location_Scout_01.jpg', type: 'Image', project: 'Nike Summer', uploadedBy: 'Anna P.', date: 'Jun 4', size: '8.2 MB' },
-    { name: 'TechCorp_Product_Shots.zip', type: 'Archive', project: 'TechCorp Launch', uploadedBy: 'Marcus C.', date: 'Jun 2', size: '156 MB' },
-    { name: 'Spotify_BTS_Photos.zip', type: 'Archive', project: 'Spotify Spotlight', uploadedBy: 'Tom S.', date: 'May 30', size: '342 MB' },
-  ],
-  audio: [
-    { name: 'Nike_VO_Take1.wav', type: 'Audio', project: 'Nike Summer', uploadedBy: 'Mike T.', date: 'Jun 7', size: '245 MB' },
-    { name: 'Spotify_Narration_Final.wav', type: 'Audio', project: 'Spotify Spotlight', uploadedBy: 'Sarah J.', date: 'Jun 4', size: '512 MB' },
-    { name: 'LocalCoffee_Ambient.wav', type: 'Audio', project: 'Local Coffee', uploadedBy: 'Mike T.', date: 'May 25', size: '89 MB' },
-  ],
-  graphics: [
-    { name: 'Nike_Logo_Animation.mov', type: 'Motion', project: 'Nike Summer', uploadedBy: 'Lisa M.', date: 'Jun 6', size: '1.2 GB' },
-    { name: 'TechCorp_Slides.pptx', type: 'Presentation', project: 'TechCorp Launch', uploadedBy: 'Marcus C.', date: 'Jun 1', size: '45 MB' },
-    { name: 'Spotify_Thumbnails.psd', type: 'PSD', project: 'Spotify Spotlight', uploadedBy: 'Sarah J.', date: 'May 29', size: '212 MB' },
-  ],
-  documents: [
-    { name: 'Nike_Call_Sheet_Day1.pdf', type: 'PDF', project: 'Nike Summer', uploadedBy: 'Elena R.', date: 'Jun 5', size: '2.4 MB' },
-    { name: 'TechCorp_Script_V3.docx', type: 'Document', project: 'TechCorp Launch', uploadedBy: 'Marcus C.', date: 'Jun 2', size: '1.8 MB' },
-    { name: 'Spotify_Run_of_Show.pdf', type: 'PDF', project: 'Spotify Spotlight', uploadedBy: 'Elena R.', date: 'May 28', size: '3.1 MB' },
-  ],
-  edits: [
-    { name: 'Nike_Summer_Rough_Cut.mov', type: 'Video', project: 'Nike Summer', uploadedBy: 'Sarah J.', date: 'Jun 7', size: '156 GB' },
-    { name: 'Spotify_Doc_Assembly.mov', type: 'Video', project: 'Spotify Spotlight', uploadedBy: 'Sarah J.', date: 'Jun 5', size: '89 GB' },
-    { name: 'LocalCoffee_Final_Cut.mov', type: 'Video', project: 'Local Coffee', uploadedBy: 'David K.', date: 'Jun 2', size: '45 GB' },
-  ],
+const folderMeta: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  footage: { label: 'Footage', icon: FileVideo, color: 'bg-blue-50 text-blue-600 border-blue-200' },
+  photos: { label: 'Photos', icon: FileImage, color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+  audio: { label: 'Audio', icon: FileAudio, color: 'bg-purple-50 text-purple-600 border-purple-200' },
+  graphics: { label: 'Graphics', icon: FileImage, color: 'bg-amber-50 text-amber-600 border-amber-200' },
+  documents: { label: 'Documents', icon: FileText, color: 'bg-rose-50 text-rose-600 border-rose-200' },
+  edits: { label: 'Edits', icon: Film, color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
 }
 
 const assetTypeIcons: Record<string, React.ElementType> = {
@@ -76,16 +43,57 @@ const assetTypeIcons: Record<string, React.ElementType> = {
 export function ManagerAssets() {
   const [activeFolder, setActiveFolder] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [form, setForm] = useState({ name: '', type: 'Video', project: '', folder: 'footage' })
+  const { assets, addAsset, deleteAsset } = useStore()
 
-  const currentFiles = activeFolder ? fileData[activeFolder] || [] : []
+  const folders = Object.entries(folderMeta).map(([id, meta]) => {
+    const files = assets[id] || []
+    const totalSize = files.reduce((acc, f) => {
+      const match = f.size.match(/^([\d.]+)\s*(GB|MB|KB|B)/)
+      if (!match) return acc
+      const num = parseFloat(match[1])
+      const unit = match[2]
+      const bytes = unit === 'GB' ? num * 1024 * 1024 * 1024 : unit === 'MB' ? num * 1024 * 1024 : unit === 'KB' ? num * 1024 : num
+      return acc + bytes
+    }, 0)
+    const sizeStr = totalSize > 1024 * 1024 * 1024 ? `${(totalSize / (1024 * 1024 * 1024)).toFixed(1)} GB` : totalSize > 1024 * 1024 ? `${(totalSize / (1024 * 1024)).toFixed(1)} MB` : `${(totalSize / 1024).toFixed(0)} KB`
+    return { id, ...meta, count: files.length, size: files.length > 0 ? sizeStr : '0 B' }
+  })
+
+  const currentFiles = activeFolder ? assets[activeFolder] || [] : []
   const filteredFiles = currentFiles.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const totalAssets = Object.values(fileData).flat().length
-  const thisWeekUploads = Object.values(fileData).flat().filter((f) =>
+  const totalAssets = Object.values(assets).flat().length
+  const thisWeekUploads = Object.values(assets).flat().filter((f) =>
     f.date.startsWith('Jun 5') || f.date.startsWith('Jun 6') || f.date.startsWith('Jun 7')
   ).length
+
+  const allSizes = Object.values(assets).flat().reduce((acc, f) => {
+    const match = f.size.match(/^([\d.]+)\s*(GB|MB|KB|B)/)
+    if (!match) return acc
+    const num = parseFloat(match[1])
+    const unit = match[2]
+    return acc + (unit === 'GB' ? num * 1024 * 1024 * 1024 : unit === 'MB' ? num * 1024 * 1024 : unit === 'KB' ? num * 1024 : num)
+  }, 0)
+  const storageUsed = allSizes > 1024 * 1024 * 1024 ? `${(allSizes / (1024 * 1024 * 1024)).toFixed(0)} GB` : `${(allSizes / (1024 * 1024)).toFixed(0)} MB`
+
+  const openUploadModal = () => {
+    setForm({ name: '', type: 'Video', project: '', folder: 'footage' })
+    setShowModal(true)
+  }
+
+  const handleUpload = () => {
+    if (!form.name.trim()) return
+    addAsset(form.folder, { name: form.name, type: form.type, project: form.project, uploadedBy: 'Current User', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 B' })
+    setShowModal(false)
+  }
+
+  const handleDelete = (folder: string, name: string) => {
+    if (confirm(`Delete ${name}?`)) deleteAsset(folder, name)
+  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +102,7 @@ export function ManagerAssets() {
           <h2 className="text-2xl font-bold text-slate-900">Asset Library</h2>
           <p className="text-slate-500">Browse, upload, and manage production assets.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+        <button onClick={openUploadModal} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
           <Upload className="w-4 h-4" /> Upload Asset
         </button>
       </div>
@@ -117,7 +125,7 @@ export function ManagerAssets() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><HardDrive className="w-5 h-5" /></div>
           <div>
-            <p className="text-2xl font-bold text-slate-900">745 GB</p>
+            <p className="text-2xl font-bold text-slate-900">{storageUsed}</p>
             <p className="text-sm text-slate-500">Storage Used</p>
           </div>
         </div>
@@ -197,9 +205,9 @@ export function ManagerAssets() {
                       <td className="px-4 py-3 text-slate-500">{file.size}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
-                          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Share2 className="w-4 h-4" /></button>
-                          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><MoreHorizontal className="w-4 h-4" /></button>
+                          <button onClick={() => alert(`Downloading: ${file.name}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
+                          <button onClick={() => alert(`Share: ${file.name}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Share2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(activeFolder!, file.name)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><MoreHorizontal className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -215,6 +223,47 @@ export function ManagerAssets() {
               <p className="text-sm">Try a different search or folder.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Upload Asset</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">File Name</label>
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="e.g. filename.mov" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="Video">Video</option>
+                  <option value="Audio">Audio</option>
+                  <option value="Image">Image</option>
+                  <option value="Document">Document</option>
+                  <option value="Archive">Archive</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                <input type="text" value={form.project} onChange={e => setForm(f => ({ ...f, project: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Project name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Folder</label>
+                <select value={form.folder} onChange={e => setForm(f => ({ ...f, folder: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  {Object.entries(folderMeta).map(([id, meta]) => <option key={id} value={id}>{meta.label}</option>)}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button onClick={handleUpload} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Upload</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

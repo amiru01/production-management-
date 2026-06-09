@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useStore } from '../../store/AppStore'
 import {
   Search,
   Plus,
@@ -10,19 +11,11 @@ import {
   Mail,
   Phone,
   Calendar,
+  X,
+  Edit2,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-const clients = [
-  { id: 1, name: 'Sarah Jenkins', company: 'Nike', email: 'sarah@nike.com', phone: '+1 (555) 123-4567', projects: 5, status: 'Active', lastActivity: '2 hours ago', avatar: 'SJ' },
-  { id: 2, name: 'Marcus Chen', company: 'TechCorp', email: 'marcus@techcorp.io', phone: '+1 (555) 234-5678', projects: 3, status: 'Active', lastActivity: '1 day ago', avatar: 'MC' },
-  { id: 3, name: 'Elena Rodriguez', company: 'Local Coffee', email: 'elena@localcoffee.com', phone: '+1 (555) 345-6789', projects: 1, status: 'At Risk', lastActivity: '2 weeks ago', avatar: 'ER' },
-  { id: 4, name: 'David Kim', company: 'Spotify', email: 'david@spotify.com', phone: '+1 (555) 456-7890', projects: 7, status: 'Active', lastActivity: '30 mins ago', avatar: 'DK' },
-  { id: 5, name: 'Amanda Foster', company: 'Puma', email: 'amanda@puma.com', phone: '+1 (555) 567-8901', projects: 2, status: 'Active', lastActivity: '4 hours ago', avatar: 'AF' },
-  { id: 6, name: 'James Wilson', company: 'Adidas', email: 'jwilson@adidas.com', phone: '+1 (555) 678-9012', projects: 0, status: 'Inactive', lastActivity: '3 months ago', avatar: 'JW' },
-  { id: 7, name: 'Lisa Park', company: 'Apple', email: 'l.park@apple.com', phone: '+1 (555) 789-0123', projects: 4, status: 'Active', lastActivity: '1 hour ago', avatar: 'LP' },
-  { id: 8, name: 'Tom Rivera', company: 'Netflix', email: 'tom@netflix.com', phone: '+1 (555) 890-1234', projects: 2, status: 'At Risk', lastActivity: '1 week ago', avatar: 'TR' },
-]
 
 const statusColors: Record<string, string> = {
   Active: 'bg-emerald-50 text-emerald-700',
@@ -31,8 +24,13 @@ const statusColors: Record<string, string> = {
 }
 
 export function AdminClientManagement() {
+  const { clients, addClient, updateClient, deleteClient } = useStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
+  const [showModal, setShowModal] = useState(false)
+  const [editingClient, setEditingClient] = useState<any>(null)
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+  const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', status: 'Active' })
 
   const filtered = clients.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.company.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
@@ -43,7 +41,43 @@ export function AdminClientManagement() {
   const totalClients = clients.length
   const activeClients = clients.filter(c => c.status === 'Active').length
   const atRisk = clients.filter(c => c.status === 'At Risk').length
-  const newThisMonth = 3
+  const newThisMonth = clients.filter(c => c.status === 'Active').length
+
+  const openAdd = () => {
+    setEditingClient(null)
+    setForm({ name: '', company: '', email: '', phone: '', status: 'Active' })
+    setShowModal(true)
+  }
+
+  const openEdit = (client: any) => {
+    setEditingClient(client)
+    setForm({ name: client.name, company: client.company, email: client.email, phone: client.phone, status: client.status })
+    setShowModal(true)
+    setOpenMenuId(null)
+  }
+
+  const handleDelete = (id: number) => {
+    setOpenMenuId(null)
+    if (confirm('Are you sure you want to delete this client?')) {
+      deleteClient(id)
+    }
+  }
+
+  const handleSubmit = () => {
+    if (editingClient) {
+      updateClient(editingClient.id, form)
+    } else {
+      addClient({
+        ...form,
+        id: 0,
+        projects: 0,
+        lastActivity: 'Just now',
+        avatar: form.name.split(' ').map((s: string) => s[0]).join(''),
+      } as any)
+    }
+    setShowModal(false)
+    setEditingClient(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -52,7 +86,7 @@ export function AdminClientManagement() {
           <h2 className="text-2xl font-bold text-slate-900">Client Management</h2>
           <p className="text-slate-500">Manage all client accounts and their production activity.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Client
         </button>
@@ -153,10 +187,20 @@ export function AdminClientManagement() {
                       {client.lastActivity}
                     </div>
                   </td>
-                  <td className="p-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                  <td className="p-4 text-right relative">
+                    <button onClick={() => setOpenMenuId(openMenuId === client.id ? null : client.id)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
                       <MoreVertical className="w-5 h-5" />
                     </button>
+                    {openMenuId === client.id && (
+                      <div className="absolute right-4 top-12 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 min-w-[120px]">
+                        <button onClick={() => openEdit(client)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                          <Edit2 className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button onClick={() => handleDelete(client.id)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -172,6 +216,47 @@ export function AdminClientManagement() {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">{editingClient ? 'Edit Client' : 'Add Client'}</h3>
+              <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+                <input type="text" value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option>Active</option>
+                  <option>At Risk</option>
+                  <option>Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSubmit} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg text-sm font-medium">{editingClient ? 'Update' : 'Add'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useStore } from '../../store/AppStore'
 import {
   Search,
   Plus,
@@ -9,23 +10,11 @@ import {
   MapPin,
   User,
   Calendar,
+  X,
+  Edit2,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-
-const equipment = [
-  { id: 1, name: 'Sony FX6 Cinema Camera', category: 'Camera', status: 'In Use', assignedTo: 'Marcus Chen', location: 'Studio A', returnDate: 'Oct 20, 2026' },
-  { id: 2, name: 'Canon C300 Mark III', category: 'Camera', status: 'Available', assignedTo: '-', location: 'Equipment Room', returnDate: '-' },
-  { id: 3, name: 'ARRI Skypanel S60-C', category: 'Lighting', status: 'In Use', assignedTo: 'Elena Rodriguez', location: 'Stage 2', returnDate: 'Oct 18, 2026' },
-  { id: 4, name: 'Sennheiser MKH 416', category: 'Audio', status: 'Available', assignedTo: '-', location: 'Equipment Room', returnDate: '-' },
-  { id: 5, name: 'DJI Ronin 4D', category: 'Camera', status: 'Maintenance', assignedTo: '-', location: 'Repair Shop', returnDate: 'Oct 25, 2026' },
-  { id: 6, name: 'Aputure 600d Pro', category: 'Lighting', status: 'Available', assignedTo: '-', location: 'Equipment Room', returnDate: '-' },
-  { id: 7, name: 'Zoom F8 Recorder', category: 'Audio', status: 'In Use', assignedTo: 'David Kim', location: 'On Location', returnDate: 'Oct 16, 2026' },
-  { id: 8, name: 'Matthews C-Stand Kit', category: 'Grip', status: 'Available', assignedTo: '-', location: 'Stage 1', returnDate: '-' },
-  { id: 9, name: 'SmallHD Cine 13', category: 'Monitor', status: 'In Use', assignedTo: 'Amanda Foster', location: 'Edit Suite 2', returnDate: 'Oct 22, 2026' },
-  { id: 10, name: 'Kino Flo Diva-Lite', category: 'Lighting', status: 'Maintenance', assignedTo: '-', location: 'Repair Shop', returnDate: 'Nov 1, 2026' },
-  { id: 11, name: 'Blackmagic Pocket 6K', category: 'Camera', status: 'Available', assignedTo: '-', location: 'Equipment Room', returnDate: '-' },
-  { id: 12, name: 'Rode Wireless Go II', category: 'Audio', status: 'In Use', assignedTo: 'James Wilson', location: 'On Location', returnDate: 'Oct 17, 2026' },
-]
 
 const statusStyles: Record<string, string> = {
   Available: 'bg-emerald-50 text-emerald-700',
@@ -39,12 +28,17 @@ const statusDot: Record<string, string> = {
   Maintenance: 'bg-amber-500',
 }
 
-const categories = [...new Set(equipment.map(e => e.category))]
-
 export function AdminEquipment() {
+  const { equipment, addEquipment, updateEquipment, deleteEquipment } = useStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
   const [categoryFilter, setCategoryFilter] = useState('All Categories')
+  const [showModal, setShowModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+  const [form, setForm] = useState({ name: '', category: 'Camera', status: 'Available', assignedTo: '-', location: '', returnDate: '-' })
+
+  const categories = [...new Set(equipment.map(e => e.category))]
 
   const filtered = equipment.filter(e => {
     const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.assignedTo.toLowerCase().includes(search.toLowerCase()) || e.location.toLowerCase().includes(search.toLowerCase())
@@ -58,6 +52,36 @@ export function AdminEquipment() {
   const available = equipment.filter(e => e.status === 'Available').length
   const underMaintenance = equipment.filter(e => e.status === 'Maintenance').length
 
+  const openAdd = () => {
+    setEditingItem(null)
+    setForm({ name: '', category: 'Camera', status: 'Available', assignedTo: '-', location: '', returnDate: '-' })
+    setShowModal(true)
+  }
+
+  const openEdit = (item: any) => {
+    setEditingItem(item)
+    setForm({ name: item.name, category: item.category, status: item.status, assignedTo: item.assignedTo, location: item.location, returnDate: item.returnDate })
+    setShowModal(true)
+    setOpenMenuId(null)
+  }
+
+  const handleDelete = (id: number) => {
+    setOpenMenuId(null)
+    if (confirm('Are you sure you want to delete this equipment item?')) {
+      deleteEquipment(id)
+    }
+  }
+
+  const handleSubmit = () => {
+    if (editingItem) {
+      updateEquipment(editingItem.id, form)
+    } else {
+      addEquipment(form as any)
+    }
+    setShowModal(false)
+    setEditingItem(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -65,7 +89,7 @@ export function AdminEquipment() {
           <h2 className="text-2xl font-bold text-slate-900">Equipment Inventory</h2>
           <p className="text-slate-500">Track and manage all production equipment.</p>
         </div>
-        <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Equipment
         </button>
@@ -170,10 +194,20 @@ export function AdminEquipment() {
                       {item.returnDate}
                     </div>
                   </td>
-                  <td className="p-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                  <td className="p-4 text-right relative">
+                    <button onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
                       <MoreVertical className="w-5 h-5" />
                     </button>
+                    {openMenuId === item.id && (
+                      <div className="absolute right-4 top-12 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10 min-w-[120px]">
+                        <button onClick={() => openEdit(item)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                          <Edit2 className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button onClick={() => handleDelete(item.id)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -189,6 +223,57 @@ export function AdminEquipment() {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">{editingItem ? 'Edit Equipment' : 'Add Equipment'}</h3>
+              <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option>Camera</option>
+                  <option>Lighting</option>
+                  <option>Audio</option>
+                  <option>Grip</option>
+                  <option>Monitor</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option>Available</option>
+                  <option>In Use</option>
+                  <option>Maintenance</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                <input type="text" value={form.assignedTo} onChange={e => setForm({...form, assignedTo: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <input type="text" value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Return Date</label>
+                <input type="text" value={form.returnDate} onChange={e => setForm({...form, returnDate: e.target.value})} placeholder="e.g. Oct 20, 2026" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSubmit} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg text-sm font-medium">{editingItem ? 'Update' : 'Add'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

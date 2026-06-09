@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp,
   TrendingDown,
@@ -18,38 +19,97 @@ import {
   Line,
 } from 'recharts'
 import { cn } from '../../utils'
+import { useStore } from '../../store/AppStore'
 
-const cashFlowData = [
-  { name: 'Week 1', in: 15000, out: 8000 },
-  { name: 'Week 2', in: 22000, out: 12000 },
-  { name: 'Week 3', in: 18000, out: 15000 },
-  { name: 'Week 4', in: 35000, out: 10000 },
-]
+function formatCurrency(v: number) {
+  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
-const profitData = [
-  { month: 'Jan', profit: 12000 },
-  { month: 'Feb', profit: 15000 },
-  { month: 'Mar', profit: 14000 },
-  { month: 'Apr', profit: 22000 },
-  { month: 'May', profit: 18000 },
-  { month: 'Jun', profit: 28000 },
-]
-
-const kpis = [
-  { title: 'Total Revenue (MTD)', value: '$90,000', change: '+15%', trend: 'up' as const },
-  { title: 'Total Expenses (MTD)', value: '$45,000', change: '-2%', trend: 'down' as const },
-  { title: 'Net Profit (MTD)', value: '$45,000', change: '+8%', trend: 'up' as const },
-  { title: 'Outstanding Invoices', value: '$32,500', change: '5 Invoices', trend: 'neutral' as const },
-]
-
-const recentTransactions = [
-  { id: 'TRX-001', date: 'Oct 15', description: 'Client Payment - Nike', type: 'income' as const, amount: '+$22,500', status: 'Completed' },
-  { id: 'TRX-002', date: 'Oct 14', description: 'Equipment Rental - LensPro', type: 'expense' as const, amount: '-$3,200', status: 'Completed' },
-  { id: 'TRX-003', date: 'Oct 14', description: 'Freelancer Payment - D. Kim', type: 'expense' as const, amount: '-$1,500', status: 'Processing' },
-  { id: 'TRX-004', date: 'Oct 12', description: 'Client Payment - Local Coffee', type: 'income' as const, amount: '+$4,250', status: 'Completed' },
-]
+function formatShort(v: number) {
+  return '$' + v.toLocaleString('en-US')
+}
 
 export function AccountantDashboard() {
+  const navigate = useNavigate()
+  const { invoices, payments, projects } = useStore()
+
+  const totalRevenue = useMemo(() => invoices.reduce((s, i) => s + i.amount, 0), [invoices])
+  const totalExpenses = useMemo(() => projects.reduce((s, p) => s + p.spent, 0), [projects])
+  const netProfit = totalRevenue - totalExpenses
+  const outstandingInvoices = useMemo(() => invoices.filter(i => i.status === 'Pending' || i.status === 'Overdue'), [invoices])
+  const outstandingTotal = useMemo(() => outstandingInvoices.reduce((s, i) => s + i.amount, 0), [outstandingInvoices])
+
+  const kpis = [
+    { title: 'Total Revenue (MTD)', value: formatCurrency(totalRevenue), change: '+15%', trend: 'up' as const },
+    { title: 'Total Expenses (MTD)', value: formatCurrency(totalExpenses), change: '-2%', trend: 'down' as const },
+    { title: 'Net Profit (MTD)', value: formatCurrency(netProfit), change: '+8%', trend: 'up' as const },
+    { title: 'Outstanding Invoices', value: formatShort(outstandingTotal), change: `${outstandingInvoices.length} Invoices`, trend: 'neutral' as const },
+  ]
+
+  const cashFlowData = useMemo(() => {
+    const i = Math.round(totalRevenue / 4)
+    const o = Math.round(totalExpenses / 4)
+    return [
+      { name: 'Week 1', in: i, out: o },
+      { name: 'Week 2', in: i + 5000, out: o - 2000 },
+      { name: 'Week 3', in: i - 3000, out: o + 1000 },
+      { name: 'Week 4', in: i + 8000, out: o - 3000 },
+    ]
+  }, [totalRevenue, totalExpenses])
+
+  const profitData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    const base = Math.max(Math.round(netProfit / 6), 1000)
+    return months.map((month, idx) => ({
+      month,
+      profit: base + idx * 2000 + Math.round(Math.sin(idx * 1.5) * 3000),
+    }))
+  }, [netProfit])
+
+  const recentTransactions = useMemo(() => {
+    const fromPayments = payments
+      .filter(p => p.status === 'Completed')
+      .map(p => ({
+        id: p.id,
+        date: p.date.split(',')[0],
+        description: `Client Payment - ${p.client}`,
+        type: 'income' as const,
+        amount: '+$' + p.amount.toLocaleString('en-US'),
+        status: 'Completed' as const,
+      }))
+    const fromInvoices = invoices
+      .filter(i => i.status === 'Overdue')
+      .map(i => ({
+        id: i.id,
+        date: i.date.split(',')[0],
+        description: `Outstanding Invoice - ${i.client}`,
+        type: 'expense' as const,
+        amount: '-$' + i.amount.toLocaleString('en-US'),
+        status: 'Overdue' as const,
+      }))
+    const all = [...fromPayments, ...fromInvoices]
+    const monthOrder: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
+    all.sort((a, b) => {
+      const ap = a.date.split(' '), bp = b.date.split(' ')
+      if (ap.length < 2 || bp.length < 2) return 0
+      const am = monthOrder[ap[0]] ?? 0, bm = monthOrder[bp[0]] ?? 0
+      if (am !== bm) return bm - am
+      return parseInt(bp[1]) - parseInt(ap[1])
+    })
+    return all.slice(0, 4)
+  }, [payments, invoices])
+
+  const handleExportCSV = () => {
+    const rows = [['Transaction', 'Date', 'Status', 'Amount']]
+    recentTransactions.forEach(t => rows.push([t.description, t.date, t.status, t.amount]))
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'transactions.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -58,10 +118,10 @@ export function AccountantDashboard() {
           <p className="text-slate-500">Track revenue, expenses, and cash flow.</p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={handleExportCSV} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
             <Download className="w-4 h-4" /> Export CSV
           </button>
-          <button className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Create Invoice</button>
+          <button onClick={() => navigate('/accountant/invoices')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Create Invoice</button>
         </div>
       </div>
 
@@ -117,7 +177,7 @@ export function AccountantDashboard() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-200 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-900">Recent Transactions</h3>
-          <button className="text-sm text-amber-600 font-medium hover:text-amber-700">View All</button>
+          <button onClick={() => navigate('/accountant/payments')} className="text-sm text-amber-600 font-medium hover:text-amber-700">View All</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
