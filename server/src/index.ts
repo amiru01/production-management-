@@ -13,6 +13,7 @@ import { assetsRouter } from './routes/assets.js'
 import { messagesRouter } from './routes/messages.js'
 import { teamRouter } from './routes/team.js'
 import { reportsRouter } from './routes/reports.js'
+import { settingsRouter } from './routes/settings.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -33,6 +34,7 @@ app.use('/api/assets', assetsRouter)
 app.use('/api/messages', messagesRouter)
 app.use('/api/team', teamRouter)
 app.use('/api/reports', reportsRouter)
+app.use('/api/settings', settingsRouter)
 
 app.listen(PORT, () => {
   console.log(`Lumen Studio API running on http://localhost:${PORT}`)
