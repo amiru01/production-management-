@@ -54,6 +54,7 @@ const roleConfigs: Record<Role, RoleConfig> = {
       { name: 'Equipment', path: '/admin/equipment', icon: Camera },
       { name: 'Finance', path: '/admin/finance', icon: DollarSign },
       { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
+      { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
       { name: 'Settings', path: '/admin/settings', icon: Settings },
     ],
   },
@@ -90,6 +91,7 @@ const roleConfigs: Record<Role, RoleConfig> = {
       { name: 'Invoices', path: '/accountant/invoices', icon: FileText },
       { name: 'Payments', path: '/accountant/payments', icon: DollarSign },
       { name: 'Reports', path: '/accountant/reports', icon: BarChart3 },
+      { name: 'Messages', path: '/accountant/messages', icon: MessageSquare },
     ],
   },
   client: {

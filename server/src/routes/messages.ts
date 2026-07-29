@@ -6,6 +6,30 @@ export const messagesRouter = Router()
 
 messagesRouter.use(authenticate)
 
+messagesRouter.get('/users', async (req, res) => {
+  const users = await prisma.user.findMany({
+    select: { id: true, name: true, email: true, role: true, status: true, lastActive: true, avatar: true },
+    orderBy: { id: 'asc' },
+  })
+  res.json(users.filter(u => u.id !== req.user!.userId))
+})
+
+messagesRouter.post('/conversations', async (req, res) => {
+  const { name, role, projectId, avatar } = req.body
+  if (!name) { res.status(400).json({ error: 'Name is required' }); return }
+  const conversation = await prisma.conversation.create({
+    data: {
+      name,
+      role: role || '',
+      projectId: projectId || null,
+      avatar: avatar || '',
+      lastMessage: 'No messages yet',
+      time: 'Just now',
+    },
+  })
+  res.status(201).json(conversation)
+})
+
 messagesRouter.get('/conversations', async (_req, res) => {
   const conversations = await prisma.conversation.findMany({
     include: { project: { select: { name: true } }, messages: { orderBy: { createdAt: 'desc' }, take: 1 } },

@@ -20,6 +20,7 @@ import { AdminEquipment } from './pages/admin/AdminEquipment'
 import { AdminFinance } from './pages/admin/AdminFinance'
 import { AdminReports } from './pages/admin/AdminReports'
 import { AdminSettings } from './pages/admin/AdminSettings'
+import { AdminMessages } from './pages/admin/AdminMessages'
 // Manager
 import { ManagerDashboard } from './pages/manager/ManagerDashboard'
 import { ProjectsBoard } from './pages/manager/ProjectsBoard'
@@ -40,6 +41,7 @@ import { AccountantDashboard } from './pages/accountant/AccountantDashboard'
 import { Invoices } from './pages/accountant/Invoices'
 import { AccountantPayments } from './pages/accountant/AccountantPayments'
 import { AccountantReports } from './pages/accountant/AccountantReports'
+import { AccountantMessages } from './pages/accountant/AccountantMessages'
 // Client
 import { ClientDashboard } from './pages/client/ClientDashboard'
 import { ClientProjects } from './pages/client/ClientProjects'
@@ -78,6 +80,7 @@ function ProtectedRoutes({ role }: { role: Role }) {
         <Route path="finance" element={<AdminFinance />} />
         <Route path="reports" element={<AdminReports />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="messages" element={<AdminMessages />} />
       </Routes>
     ),
     manager: (
@@ -107,6 +110,7 @@ function ProtectedRoutes({ role }: { role: Role }) {
         <Route path="invoices" element={<Invoices />} />
         <Route path="payments" element={<AccountantPayments />} />
         <Route path="reports" element={<AccountantReports />} />
+        <Route path="messages" element={<AccountantMessages />} />
       </Routes>
     ),
     client: (

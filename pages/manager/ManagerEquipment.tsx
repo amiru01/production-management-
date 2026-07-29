@@ -68,6 +68,8 @@ export function ManagerEquipment() {
   }
 
   const openAssignModal = (name: string) => {
+    const item = equipment.find(e => e.name === name)
+    if (!item || item.status !== 'Available') return
     setAssignItem(name)
     setAssignForm({ assignedTo: '', location: '' })
     setShowAssignModal(true)
@@ -159,9 +161,13 @@ export function ManagerEquipment() {
                   <span className="text-xs text-slate-400 truncate ml-2">{item.assignedTo}{item.location ? ` - ${item.location}` : ''}</span>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => openAssignModal(item.name)} className="flex-1 border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-                    <Plus className="w-3.5 h-3.5" /> Assign Equipment
-                  </button>
+                  {item.status === 'Available' ? (
+                    <button onClick={() => openAssignModal(item.name)} className="flex-1 border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+                      <Plus className="w-3.5 h-3.5" /> Assign Equipment
+                    </button>
+                  ) : (
+                    <span className="flex-1 text-xs text-slate-400 text-center py-1.5 opacity-0 group-hover:opacity-100">{item.status === 'In Use' ? `Assigned to ${item.assignedTo}` : 'In maintenance'}</span>
+                  )}
                   <button onClick={() => handleDelete(item.id)} className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1.5 opacity-0 group-hover:opacity-100">Delete</button>
                 </div>
               </div>
