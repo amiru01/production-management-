@@ -60,6 +60,7 @@ const talent = [
 export function ManagerProductionPlanning() {
   const [activeTab, setActiveTab] = useState('scripts')
   const [showModal, setShowModal] = useState(false)
+  const [viewItem, setViewItem] = useState<any>(null)
   const [form, setForm] = useState({ title: '', project: '', status: 'Draft', assignee: '' })
   const { scripts, addScript, updateScript, deleteScript, storyboards, addStoryboard, updateStoryboard, deleteStoryboard, shotLists, addShotList, updateShotList, deleteShotList, permits, addPermit, updatePermit, deletePermit } = useStore()
 
@@ -119,7 +120,7 @@ export function ManagerProductionPlanning() {
                   <td className="py-3 pr-4 text-slate-500">{s.lastUpdated}</td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                      <button onClick={() => setViewItem(s)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                       <button onClick={() => alert(`Downloading: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Download className="w-4 h-4" /></button>
                     </div>
                   </td>
@@ -154,7 +155,7 @@ export function ManagerProductionPlanning() {
                   </td>
                   <td className="py-3 pr-4 text-slate-600">{s.assignee}</td>
                   <td className="py-3 text-right">
-                    <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => setViewItem(s)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -185,7 +186,7 @@ export function ManagerProductionPlanning() {
                   <td className="py-3 pr-4 text-slate-600">{s.assignee}</td>
                   <td className="py-3 pr-4 text-slate-500">{s.lastUpdated}</td>
                   <td className="py-3 text-right">
-                    <button onClick={() => alert(`Viewing: ${s.title}`)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => setViewItem(s)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -216,7 +217,7 @@ export function ManagerProductionPlanning() {
                   </td>
                   <td className="py-3 pr-4 text-slate-600">{l.project}</td>
                   <td className="py-3 text-right">
-                    <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => setViewItem(l)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -247,7 +248,7 @@ export function ManagerProductionPlanning() {
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', t.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700' : t.status === 'Pending' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>{t.status}</span>
                   </td>
                   <td className="py-3 text-right">
-                    <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => setViewItem(t)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><Eye className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -366,6 +367,30 @@ export function ManagerProductionPlanning() {
           <div className="overflow-x-auto">{renderTable()}</div>
         </div>
       </div>
+
+      {viewItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setViewItem(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {activeTab === 'scripts' ? 'Script' : activeTab === 'storyboards' ? 'Storyboard' : activeTab === 'shotlists' ? 'Shot List' : activeTab === 'locations' ? 'Location' : activeTab === 'talent' ? 'Talent' : 'Permit'} Details
+              </h3>
+              <button onClick={() => setViewItem(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(viewItem).filter(([k]) => k !== 'id').map(([key, val]) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">{key}</label>
+                  <p className="text-sm text-slate-900">{String(val)}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-6">
+              <button onClick={() => setViewItem(null)} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

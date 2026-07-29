@@ -20,8 +20,11 @@ export function ManagerTeam() {
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [taskMember, setTaskMember] = useState('')
   const [form, setForm] = useState({ name: '', role: '', project: '', status: 'Available', contact: '', tasks: 0, availability: 100 })
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [taskForm, setTaskForm] = useState({ title: '', description: '' })
-  const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember } = useStore()
+  const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, tasks, addTask } = useStore()
+
+  const roleOptions = roles.filter(r => r !== 'All Roles')
 
   const statCards = [
     { label: 'Total Team', value: String(teamMembers.length), color: 'bg-blue-50 text-blue-600', icon: Users },
@@ -37,13 +40,24 @@ export function ManagerTeam() {
   })
 
   const openAddModal = () => {
+    setEditingId(null)
     setForm({ name: '', role: '', project: '', status: 'Available', contact: '', tasks: 0, availability: 100 })
+    setShowModal(true)
+  }
+
+  const openEditModal = (member: typeof teamMembers[0]) => {
+    setEditingId(member.id)
+    setForm({ name: member.name, role: member.role, project: member.project, status: member.status, contact: member.contact, tasks: member.tasks, availability: member.availability })
     setShowModal(true)
   }
 
   const handleSave = () => {
     if (!form.name.trim()) return
-    addTeamMember({ id: 0, name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
+    if (editingId !== null) {
+      updateTeamMember(editingId, { name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
+    } else {
+      addTeamMember({ id: 0, name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
+    }
     setShowModal(false)
   }
 
@@ -59,7 +73,15 @@ export function ManagerTeam() {
 
   const handleTaskSave = () => {
     if (!taskForm.title.trim()) return
-    alert(`Task "${taskForm.title}" assigned to ${taskMember}`)
+    addTask({
+      id: 0,
+      title: taskForm.title,
+      project: '',
+      priority: 'Medium',
+      status: 'To Do',
+      dueDate: '',
+      assignee: taskMember,
+    })
     setShowTaskModal(false)
   }
 
@@ -163,6 +185,7 @@ export function ManagerTeam() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center gap-2 justify-end">
+                      <button onClick={() => openEditModal(member)} className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm">Edit</button>
                       <button onClick={() => openTaskModal(member.name)} className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5">
                         <Plus className="w-3.5 h-3.5" /> Assign Task
                       </button>
@@ -180,7 +203,7 @@ export function ManagerTeam() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Add Team Member</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{editingId ? 'Edit Team Member' : 'Add Team Member'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
@@ -190,7 +213,10 @@ export function ManagerTeam() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                <input type="text" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]" placeholder="Enter role" />
+                <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#191970]/20 focus:border-[#191970]">
+                  <option value="">Select role</option>
+                  {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Contact</label>

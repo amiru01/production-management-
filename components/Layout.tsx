@@ -149,9 +149,9 @@ export function Layout({ children }: LayoutProps) {
             <Menu className="w-6 h-6" />
           )}
         </button>
-        <div className="flex items-center gap-2">
+        <Link to={`/${role}/dashboard`} onClick={() => setSidebarOpen(false)} className="flex items-center gap-2">
           {companyLogo ? (
-            <img src={companyLogo} alt="Logo" className="h-8 w-auto" />
+            <img src={companyLogo} alt="Logo" className="h-9 w-auto rounded-lg" />
           ) : (
             <>
               <div className="w-8 h-8 bg-[#191970] rounded-md flex items-center justify-center">
@@ -160,7 +160,7 @@ export function Layout({ children }: LayoutProps) {
               <span className="font-bold text-lg">Lumen Studio</span>
             </>
           )}
-        </div>
+        </Link>
       </div>
 
       {/* Sidebar */}
@@ -170,9 +170,9 @@ export function Layout({ children }: LayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className="p-6 hidden md:flex items-center gap-3">
+        <Link to={`/${role}/dashboard`} className="p-6 hidden md:flex items-center gap-3">
           {companyLogo ? (
-            <img src={companyLogo} alt="Logo" className="h-8 w-auto" />
+            <img src={companyLogo} alt="Logo" className="h-10 w-auto rounded-xl" />
           ) : (
             <>
               <div className="w-8 h-8 bg-[#191970] rounded-lg flex items-center justify-center shadow-sm">
@@ -181,7 +181,7 @@ export function Layout({ children }: LayoutProps) {
               <span className="font-bold text-xl tracking-tight">Lumen Studio</span>
             </>
           )}
-        </div>
+        </Link>
 
         <div className="px-6 pb-4">
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
