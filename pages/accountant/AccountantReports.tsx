@@ -234,7 +234,15 @@ export function AccountantReports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {reports.map((rpt, i) => (
+              {reports.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No reports generated yet</p>
+                    <p className="text-xs mt-1">Generate a report using the button above to see it here.</p>
+                  </td>
+                </tr>
+              ) : reports.map((rpt, i) => (
                 <tr key={i} className="hover:bg-slate-50 transition-colors group">
                   <td className="p-4">
                     <div className="flex items-center gap-3">

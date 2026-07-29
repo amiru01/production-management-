@@ -86,7 +86,14 @@ export function AdminReports() {
 
   const handleDownload = (report: string) => {
     setDownloading(report)
-    setTimeout(() => setDownloading(null), 2000)
+    const lines = [`Report: ${report}`, `Generated: ${new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}`, ''] 
+    const content = lines.join('\n')
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = report.replace(/\s+/g, '_') + '.txt'; a.click()
+    URL.revokeObjectURL(url)
+    setTimeout(() => setDownloading(null), 500)
   }
 
   return (
@@ -141,7 +148,15 @@ export function AdminReports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {recentReports.map((report) => (
+              {recentReports.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No reports generated yet</p>
+                    <p className="text-xs mt-1">Generate a report above to see it here.</p>
+                  </td>
+                </tr>
+              ) : recentReports.map((report) => (
                 <tr key={report.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="p-4">
                     <div className="flex items-center gap-2">

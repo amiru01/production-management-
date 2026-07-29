@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { Role } from '../lib/permissions'
 
 interface User {
@@ -13,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
+  updateAvatar: (avatar: string) => void
 }
 
 const mockUsers: { email: string; password: string; user: User }[] = [
@@ -25,8 +26,25 @@ const mockUsers: { email: string; password: string; user: User }[] = [
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+function loadUser(): User | null {
+  try {
+    const stored = localStorage.getItem('auth_user')
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(loadUser)
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('auth_user')
+    }
+  }, [user])
 
   const login = useCallback(async (email: string, password: string) => {
     await new Promise((r) => setTimeout(r, 600))
@@ -40,8 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateAvatar = useCallback((avatar: string) => {
+    setUser(prev => prev ? { ...prev, avatar } : null)
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   )

@@ -85,3 +85,34 @@ settingsRouter.delete('/slack', async (_req, res) => {
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+settingsRouter.get('/logo', async (_req, res) => {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: 'company_logo' } })
+    res.json({ logo: setting?.value || null })
+  } catch (err) {
+    console.error('Error fetching logo:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+settingsRouter.post('/logo', async (req, res) => {
+  try {
+    const { logo } = req.body
+    if (!logo) {
+      res.status(400).json({ error: 'Logo data is required' })
+      return
+    }
+
+    await prisma.setting.upsert({
+      where: { key: 'company_logo' },
+      update: { value: logo },
+      create: { key: 'company_logo', value: logo },
+    })
+
+    res.json({ success: true, logo })
+  } catch (err) {
+    console.error('Error saving logo:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

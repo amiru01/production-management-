@@ -50,6 +50,13 @@ const notificationEvents = [
 export function AdminSettings() {
   const [activeTab, setActiveTab] = useState<TabType>('Company')
   const [saved, setSaved] = useState(false)
+  const [logo, setLogo] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('company_logo')
+    if (stored) setLogo(stored)
+  }, [])
 
   const handleSave = () => {
     setSaved(true)
@@ -60,6 +67,19 @@ export function AdminSettings() {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/png,image/jpeg,image/svg+xml'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      setUploading(true)
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        localStorage.setItem('company_logo', dataUrl)
+        setLogo(dataUrl)
+        setUploading(false)
+      }
+      reader.readAsDataURL(file)
+    }
     input.click()
   }
 
@@ -86,7 +106,7 @@ export function AdminSettings() {
         </div>
 
         <div className="p-6">
-          {activeTab === 'Company' && <CompanySettings onSave={handleSave} saved={saved} onLogoUpload={handleLogoUpload} />}
+          {activeTab === 'Company' && <CompanySettings onSave={handleSave} saved={saved} onLogoUpload={handleLogoUpload} logo={logo} uploading={uploading} />}
           {activeTab === 'Notifications' && <NotificationsSettings onSave={handleSave} saved={saved} />}
           {activeTab === 'Security' && <SecuritySettings onSave={handleSave} saved={saved} />}
         </div>
@@ -95,17 +115,23 @@ export function AdminSettings() {
   )
 }
 
-function CompanySettings({ onSave, saved, onLogoUpload }: { onSave: () => void; saved: boolean; onLogoUpload: () => void }) {
+function CompanySettings({ onSave, saved, onLogoUpload, logo, uploading }: { onSave: () => void; saved: boolean; onLogoUpload: () => void; logo: string | null; uploading: boolean }) {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-6 pb-6 border-b border-slate-200">
-        <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400">LM</div>
+        <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden">
+          {logo ? (
+            <img src={logo} alt="Company Logo" className="w-full h-full object-contain" />
+          ) : (
+            <span className="text-2xl font-bold text-slate-400">LM</span>
+          )}
+        </div>
         <div>
           <p className="text-sm font-medium text-slate-900 mb-1">Company Logo</p>
           <p className="text-xs text-slate-500 mb-3">PNG, JPG or SVG. 500x500px recommended.</p>
-          <button onClick={onLogoUpload} className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            <Upload className="w-4 h-4" />
-            Upload Logo
+          <button onClick={onLogoUpload} disabled={uploading} className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {uploading ? 'Uploading...' : 'Upload Logo'}
           </button>
         </div>
       </div>

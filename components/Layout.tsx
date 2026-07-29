@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../utils'
 import { useAuth } from '../context/AuthContext'
@@ -107,11 +107,33 @@ const roleConfigs: Record<Role, RoleConfig> = {
 
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [companyLogo, setCompanyLogo] = useState<string | null>(() => localStorage.getItem('company_logo'))
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user, logout, updateAvatar } = useAuth()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const role = user!.role
   const config = roleConfigs[role]
+
+  useEffect(() => {
+    const handler = () => setCompanyLogo(localStorage.getItem('company_logo'))
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
+
+  const handleAvatarUpload = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      updateAvatar(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] flex flex-col md:flex-row">
@@ -128,10 +150,16 @@ export function Layout({ children }: LayoutProps) {
           )}
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#191970] rounded-md flex items-center justify-center">
-            <Video className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-lg">Lumen Studio</span>
+          {companyLogo ? (
+            <img src={companyLogo} alt="Logo" className="h-8 w-auto" />
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-[#191970] rounded-md flex items-center justify-center">
+                <Video className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-lg">Lumen Studio</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -143,10 +171,16 @@ export function Layout({ children }: LayoutProps) {
         )}
       >
         <div className="p-6 hidden md:flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#191970] rounded-lg flex items-center justify-center shadow-sm">
-            <Video className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-xl tracking-tight">Lumen Studio</span>
+          {companyLogo ? (
+            <img src={companyLogo} alt="Logo" className="h-8 w-auto" />
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-[#191970] rounded-lg flex items-center justify-center shadow-sm">
+                <Video className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-xl tracking-tight">Lumen Studio</span>
+            </>
+          )}
         </div>
 
         <div className="px-6 pb-4">
@@ -223,9 +257,14 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-sm font-medium text-slate-800">{user?.name}</p>
               <p className="text-xs text-slate-500 capitalize">{role}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-[#191970] flex items-center justify-center text-white text-sm font-semibold shadow-sm">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
+            <button onClick={handleAvatarUpload} className="w-9 h-9 rounded-full bg-[#191970] flex items-center justify-center text-white text-sm font-semibold shadow-sm overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.charAt(0) || 'U'
+              )}
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleFileChange} className="hidden" />
           </div>
         </header>
 
