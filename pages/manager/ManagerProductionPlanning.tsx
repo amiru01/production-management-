@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   FileText,
   Image,
@@ -12,9 +12,13 @@ import {
   Download,
   Plus,
   X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialScripts, initialStoryboards, initialShotLists, initialPermits } from '../../store/AppStore'
+
+interface PlanningItem { id: number; title: string; project: string; status: string; assignee: string; lastUpdated: string }
 
 const tabs = [
   { id: 'scripts', label: 'Scripts', icon: FileText },
@@ -57,19 +61,80 @@ const talent = [
   { id: 4, name: 'Sophie Chen', role: 'Extra', project: 'Nike Summer', contact: 'sophie@email.com', status: 'On Hold' },
 ]
 
+function getApiType(tab: string): string {
+  switch (tab) {
+    case 'scripts': return 'script'
+    case 'storyboards': return 'storyboard'
+    case 'shotlists': return 'shotList'
+    case 'permits': return 'permit'
+    default: return ''
+  }
+}
+
 export function ManagerProductionPlanning() {
   const [activeTab, setActiveTab] = useState('scripts')
   const [showModal, setShowModal] = useState(false)
   const [viewItem, setViewItem] = useState<any>(null)
   const [form, setForm] = useState({ title: '', project: '', status: 'Draft', assignee: '' })
-  const { scripts, addScript, updateScript, deleteScript, storyboards, addStoryboard, updateStoryboard, deleteStoryboard, shotLists, addShotList, updateShotList, deleteShotList, permits, addPermit, updatePermit, deletePermit } = useStore()
+  const [scripts, setScripts] = useState<PlanningItem[]>([])
+  const [storyboards, setStoryboards] = useState<PlanningItem[]>([])
+  const [shotLists, setShotLists] = useState<PlanningItem[]>([])
+  const [permits, setPermits] = useState<PlanningItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
 
-  const handleDelete = (id: number, type: string) => {
-    if (!confirm(`Delete this ${type}?`)) return
-    const actions: Record<string, (id: number) => void> = {
-      scripts: deleteScript, storyboards: deleteStoryboard, shotlists: deleteShotList, permits: deletePermit,
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [sc, st, sl, pe] = await Promise.all([
+        apiFetch<PlanningItem[]>('/planning/script'),
+        apiFetch<PlanningItem[]>('/planning/storyboard'),
+        apiFetch<PlanningItem[]>('/planning/shotList'),
+        apiFetch<PlanningItem[]>('/planning/permit'),
+      ])
+      setScripts(sc)
+      setStoryboards(st)
+      setShotLists(sl)
+      setPermits(pe)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const loadSaved = (key: string, fallback: PlanningItem[]) => {
+        const s = localStorage.getItem(key)
+        return s ? JSON.parse(s) : fallback
+      }
+      setScripts(loadSaved('mock_scripts', initialScripts as PlanningItem[]))
+      setStoryboards(loadSaved('mock_storyboards', initialStoryboards as PlanningItem[]))
+      setShotLists(loadSaved('mock_shotLists', initialShotLists as PlanningItem[]))
+      setPermits(loadSaved('mock_permits', initialPermits as PlanningItem[]))
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
     }
-    actions[type]?.(id)
+  }
+
+  useEffect(() => { if (isMockData) localStorage.setItem('mock_scripts', JSON.stringify(scripts)) }, [scripts, isMockData])
+  useEffect(() => { if (isMockData) localStorage.setItem('mock_storyboards', JSON.stringify(storyboards)) }, [storyboards, isMockData])
+  useEffect(() => { if (isMockData) localStorage.setItem('mock_shotLists', JSON.stringify(shotLists)) }, [shotLists, isMockData])
+  useEffect(() => { if (isMockData) localStorage.setItem('mock_permits', JSON.stringify(permits)) }, [permits, isMockData])
+
+  const handleDelete = async (id: number, type: string) => {
+    if (!confirm(`Delete this ${type}?`)) return
+    try {
+      if (isMockData) {
+        if (type === 'scripts') setScripts(prev => prev.filter(i => i.id !== id))
+        else if (type === 'storyboards') setStoryboards(prev => prev.filter(i => i.id !== id))
+        else if (type === 'shotlists') setShotLists(prev => prev.filter(i => i.id !== id))
+        else if (type === 'permits') setPermits(prev => prev.filter(i => i.id !== id))
+      } else {
+        await apiFetch(`/planning/${getApiType(type)}/${id}`, { method: 'DELETE' })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to delete', err)
+    }
   }
 
   const openAddModal = () => {
@@ -77,16 +142,26 @@ export function ManagerProductionPlanning() {
     setShowModal(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) return
-    const addActions: Record<string, (item: any) => void> = {
-      scripts: addScript, storyboards: addStoryboard, shotlists: addShotList, permits: addPermit,
+    try {
+      if (isMockData) {
+        const item: PlanningItem = { id: Date.now(), title: form.title, project: form.project, status: form.status, assignee: form.assignee, lastUpdated: 'Just now' }
+        if (activeTab === 'scripts') setScripts(prev => [...prev, item])
+        else if (activeTab === 'storyboards') setStoryboards(prev => [...prev, item])
+        else if (activeTab === 'shotlists') setShotLists(prev => [...prev, item])
+        else if (activeTab === 'permits') setPermits(prev => [...prev, item])
+      } else {
+        await apiFetch(`/planning/${getApiType(activeTab)}`, {
+          method: 'POST',
+          body: JSON.stringify({ title: form.title, projectId: form.project, status: form.status, assignee: form.assignee }),
+        })
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to save', err)
     }
-    addActions[activeTab]?.({
-      id: 0, title: form.title, project: form.project, status: form.status,
-      assignee: form.assignee, lastUpdated: 'Just now',
-    })
-    setShowModal(false)
   }
 
   const currentData: Record<string, any[]> = { scripts, storyboards, shotlists: shotLists, permits }
@@ -364,7 +439,13 @@ export function ManagerProductionPlanning() {
               <span><strong className="text-slate-900">{getItemCount()}</strong> items</span>
             </div>
           </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20 text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading planning data...
+            </div>
+          ) : (
           <div className="overflow-x-auto">{renderTable()}</div>
+          )}
         </div>
       </div>
 

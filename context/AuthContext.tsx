@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { Role } from '../lib/permissions'
+import { setToken, clearToken } from '../lib/api'
 
 interface User {
   name: string
@@ -47,14 +48,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   const login = useCallback(async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 600))
-    const found = mockUsers.find((u) => u.email === email && u.password === password)
-    if (!found) return { success: false, error: 'Invalid email or password.' }
-    setUser(found.user)
-    return { success: true }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { success: false, error: data.error || 'Login failed' }
+      setToken(data.token)
+      setUser({ name: data.user.name, email: data.user.email, role: data.user.role, avatar: data.user.avatar })
+      return { success: true }
+    } catch {
+      const found = mockUsers.find((u) => u.email === email && u.password === password)
+      if (!found) return { success: false, error: 'Invalid email or password.' }
+      setUser(found.user)
+      return { success: true }
+    }
   }, [])
 
   const logout = useCallback(() => {
+    clearToken()
     setUser(null)
   }, [])
 

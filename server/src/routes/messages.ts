@@ -73,5 +73,27 @@ messagesRouter.post('/conversations/:id/messages', async (req, res) => {
     where: { id: Number(req.params.id) },
     data: { lastMessage: text, time: 'Just now', unread: { increment: 1 } },
   })
+  const io = req.app.get('io')
+  if (io) {
+    io.to(`conversation:${req.params.id}`).emit('new_message', {
+      conversationId: Number(req.params.id),
+      message: { id: message.id, sender: req.user!.name, text, time: 'Just now', isMe: false },
+    })
+  }
   res.status(201).json(message)
+})
+
+messagesRouter.put('/conversations/:id/read', async (req, res) => {
+  await prisma.conversation.update({
+    where: { id: Number(req.params.id) },
+    data: { unread: 0 },
+  })
+  const io = req.app.get('io')
+  if (io) {
+    io.to(`conversation:${req.params.id}`).emit('conversation_read', {
+      conversationId: Number(req.params.id),
+      userId: req.user!.userId,
+    })
+  }
+  res.json({ success: true })
 })

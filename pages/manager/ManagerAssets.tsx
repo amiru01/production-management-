@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Folder,
   FileImage,
@@ -15,9 +15,13 @@ import {
   Clock,
   BarChart3,
   X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialAssets } from '../../store/AppStore'
+
+interface AssetFile { name: string; type: string; project: string; uploadedBy: string; date: string; size: string }
 
 const folderMeta: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   footage: { label: 'Footage', icon: FileVideo, color: 'bg-blue-50 text-blue-600 border-blue-200' },
@@ -45,7 +49,31 @@ export function ManagerAssets() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'Video', project: '', folder: 'footage' })
-  const { assets, addAsset, deleteAsset } = useStore()
+  const [assets, setAssets] = useState<Record<string, AssetFile[]>>({})
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
+
+  useEffect(() => { loadData() }, [])
+
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_assets', JSON.stringify(assets))
+  }, [assets, isMockData])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const data = await apiFetch<Record<string, AssetFile[]>>('/assets')
+      setAssets(data)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const saved = localStorage.getItem('mock_assets')
+      setAssets(saved ? JSON.parse(saved) : initialAssets as Record<string, AssetFile[]>)
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const folders = Object.entries(folderMeta).map(([id, meta]) => {
     const files = assets[id] || []
@@ -85,14 +113,36 @@ export function ManagerAssets() {
     setShowModal(true)
   }
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!form.name.trim()) return
-    addAsset(form.folder, { name: form.name, type: form.type, project: form.project, uploadedBy: 'Current User', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 B' })
-    setShowModal(false)
+    try {
+      if (isMockData) {
+        setAssets(prev => ({ ...prev, [form.folder]: [...(prev[form.folder] || []), { name: form.name, type: form.type, project: form.project, uploadedBy: 'Current User', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 B' }] }))
+      } else {
+        await apiFetch('/assets', {
+          method: 'POST',
+          body: JSON.stringify({ name: form.name, type: form.type, folder: form.folder, projectId: form.project, uploadedBy: 'Current User', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 B' }),
+        })
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to upload asset', err)
+    }
   }
 
-  const handleDelete = (folder: string, name: string) => {
-    if (confirm(`Delete ${name}?`)) deleteAsset(folder, name)
+  const handleDelete = async (folder: string, name: string) => {
+    if (!confirm(`Delete ${name}?`)) return
+    try {
+      if (isMockData) {
+        setAssets(prev => ({ ...prev, [folder]: (prev[folder] || []).filter(a => a.name !== name) }))
+      } else {
+        await apiFetch('/assets/' + encodeURIComponent(name), { method: 'DELETE' })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to delete asset', err)
+    }
   }
 
   return (
@@ -131,7 +181,11 @@ export function ManagerAssets() {
         </div>
       </div>
 
-      {!activeFolder ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-slate-400">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading assets...
+        </div>
+      ) : !activeFolder ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {folders.map((folder) => (
             <button

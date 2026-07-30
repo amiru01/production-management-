@@ -37,7 +37,7 @@ const initialClients: Client[] = [
   { id: 8, name: 'Tom Rivera', company: 'Netflix', email: 'tom@netflix.com', phone: '+1 (555) 890-1234', projects: 2, status: 'At Risk', lastActivity: '1 week ago', avatar: 'TR' },
 ]
 
-const initialProjects: Project[] = [
+export const initialProjects: Project[] = [
   { id: 1, name: 'Summer Campaign', client: 'Nike', manager: 'Marcus Chen', status: 'In Production', budget: 45000, spent: 28000, timeline: 'Oct 15 - Nov 15', progress: 65, color: 'bg-blue-500' },
   { id: 2, name: 'Product Launch', client: 'TechCorp', manager: 'Elena Rodriguez', status: 'Planning', budget: 28000, spent: 5000, timeline: 'Nov 1 - Dec 1', progress: 20, color: 'bg-amber-500' },
   { id: 3, name: 'Brand Story', client: 'Local Coffee', manager: 'David Kim', status: 'Post-Production', budget: 8500, spent: 8000, timeline: 'Oct 1 - Oct 25', progress: 90, color: 'bg-emerald-500' },
@@ -48,7 +48,7 @@ const initialProjects: Project[] = [
   { id: 8, name: 'Series Launch', client: 'Netflix', manager: 'Amanda Foster', status: 'Planning', budget: 120000, spent: 10000, timeline: 'Dec 1 - Feb 28', progress: 10, color: 'bg-amber-500' },
 ]
 
-const initialEquipment: EquipmentItem[] = [
+export const initialEquipment: EquipmentItem[] = [
   { id: 1, name: 'Sony FX6 Cinema Camera', category: 'Camera', status: 'In Use', assignedTo: 'Marcus Chen', location: 'Studio A', returnDate: 'Oct 20, 2026' },
   { id: 2, name: 'Canon C300 Mark III', category: 'Camera', status: 'Available', assignedTo: '-', location: 'Equipment Room', returnDate: '-' },
   { id: 3, name: 'ARRI Skypanel S60-C', category: 'Lighting', status: 'In Use', assignedTo: 'Elena Rodriguez', location: 'Stage 2', returnDate: 'Oct 18, 2026' },
@@ -63,43 +63,43 @@ const initialEquipment: EquipmentItem[] = [
   { id: 12, name: 'Rode Wireless Go II', category: 'Audio', status: 'In Use', assignedTo: 'James Wilson', location: 'On Location', returnDate: 'Oct 17, 2026' },
 ]
 
-const initialScripts: PlanningItem[] = [
+export const initialScripts: PlanningItem[] = [
   { id: 1, title: 'Nike Summer Campaign Script', project: 'Summer Campaign', status: 'Approved', assignee: 'Marcus Chen', lastUpdated: '2 hours ago' },
   { id: 2, title: 'TechCorp Product Launch', project: 'Product Launch', status: 'Draft', assignee: 'Elena Rodriguez', lastUpdated: '1 day ago' },
   { id: 3, title: 'Local Coffee Brand Story v3', project: 'Brand Story', status: 'Approved', assignee: 'David Kim', lastUpdated: '3 days ago' },
   { id: 4, title: 'Artist Spotlight Interview Script', project: 'Artist Spotlight', status: 'In Review', assignee: 'Amanda Foster', lastUpdated: '5 hours ago' },
 ]
 
-const initialStoryboards: PlanningItem[] = [
+export const initialStoryboards: PlanningItem[] = [
   { id: 1, title: 'Summer Campaign Storyboard', project: 'Summer Campaign', status: 'Approved', assignee: 'David Kim', lastUpdated: '1 day ago' },
   { id: 2, title: 'Product Launch Animatic', project: 'Product Launch', status: 'In Progress', assignee: 'Elena Rodriguez', lastUpdated: '4 hours ago' },
   { id: 3, title: 'Brand Story Moodboard', project: 'Brand Story', status: 'Approved', assignee: 'Marcus Chen', lastUpdated: '1 week ago' },
   { id: 4, title: 'Keynote Event Storyboard', project: 'Keynote Event', status: 'Pending', assignee: 'Lisa Park', lastUpdated: '2 days ago' },
 ]
 
-const initialShotLists: PlanningItem[] = [
+export const initialShotLists: PlanningItem[] = [
   { id: 1, title: 'Nike Location Shot List', project: 'Summer Campaign', status: 'Complete', assignee: 'Marcus Chen', lastUpdated: '3 days ago' },
   { id: 2, title: 'TechCorp Studio Setup', project: 'Product Launch', status: 'In Progress', assignee: 'James Wilson', lastUpdated: '1 hour ago' },
   { id: 3, title: 'Coffee Shop B-Roll List', project: 'Brand Story', status: 'Complete', assignee: 'Elena Rodriguez', lastUpdated: '5 days ago' },
   { id: 4, title: 'Netflix Series Shot Plan', project: 'Series Launch', status: 'Draft', assignee: 'Amanda Foster', lastUpdated: '1 day ago' },
 ]
 
-const initialPermits: PlanningItem[] = [
+export const initialPermits: PlanningItem[] = [
   { id: 1, title: 'Downtown Filming Permit', project: 'Summer Campaign', status: 'Approved', assignee: 'David Kim', lastUpdated: '2 days ago' },
   { id: 2, title: 'Park Location Permit', project: 'Brand Story', status: 'Pending', assignee: 'Marcus Chen', lastUpdated: '1 week ago' },
   { id: 3, title: 'Aerial Drone Authorization', project: 'Artist Spotlight', status: 'Pending', assignee: 'Amanda Foster', lastUpdated: '4 days ago' },
   { id: 4, title: 'Studio Soundstage Permit', project: 'Holiday Campaign', status: 'Approved', assignee: 'Elena Rodriguez', lastUpdated: '1 day ago' },
 ]
 
-const initialTeamMembers: TeamMember[] = [
-  { id: 1, name: 'Elena R.', role: 'Director', project: 'Nike Summer Campaign', status: 'On Set', tasks: 3, availability: 20, contact: 'elena@prod.com' },
-  { id: 2, name: 'David K.', role: 'DP', project: 'Available', status: 'Available', tasks: 0, availability: 100, contact: 'david@prod.com' },
-  { id: 3, name: 'Sarah J.', role: 'Editor', project: 'Local Coffee', status: 'Editing', tasks: 5, availability: 40, contact: 'sarah@prod.com' },
-  { id: 4, name: 'Mike T.', role: 'Sound', project: 'Nike Summer Campaign', status: 'On Set', tasks: 2, availability: 60, contact: 'mike@prod.com' },
-  { id: 5, name: 'Marcus C.', role: 'Producer', project: 'TechCorp Launch', status: 'On Leave', tasks: 0, availability: 0, contact: 'marcus@prod.com' },
-  { id: 6, name: 'Anna P.', role: 'Gaffer', project: 'Spotify Spotlight', status: 'Available', tasks: 1, availability: 85, contact: 'anna@prod.com' },
-  { id: 7, name: 'Tom S.', role: 'PA', project: 'Nike Summer Campaign', status: 'On Set', tasks: 6, availability: 15, contact: 'tom@prod.com' },
-  { id: 8, name: 'Lisa M.', role: 'Editor', project: 'Adidas Winter Promo', status: 'Available', tasks: 2, availability: 70, contact: 'lisa@prod.com' },
+export const initialTeamMembers: TeamMember[] = [
+  { id: 1, name: 'Elena R.', role: 'Director', project: 'Nike Summer Campaign', status: 'On Set', tasks: 2, availability: 60, contact: 'elena@prod.com' },
+  { id: 2, name: 'David K.', role: 'DP', project: 'Available', status: 'Available', tasks: 1, availability: 80, contact: 'david@prod.com' },
+  { id: 3, name: 'Sarah J.', role: 'Editor', project: 'Local Coffee', status: 'Editing', tasks: 2, availability: 60, contact: 'sarah@prod.com' },
+  { id: 4, name: 'Mike T.', role: 'Sound', project: 'Nike Summer Campaign', status: 'On Set', tasks: 1, availability: 80, contact: 'mike@prod.com' },
+  { id: 5, name: 'Marcus C.', role: 'Producer', project: 'TechCorp Launch', status: 'On Leave', tasks: 1, availability: 80, contact: 'marcus@prod.com' },
+  { id: 6, name: 'Anna P.', role: 'Gaffer', project: 'Spotify Spotlight', status: 'Available', tasks: 0, availability: 100, contact: 'anna@prod.com' },
+  { id: 7, name: 'Tom S.', role: 'PA', project: 'Nike Summer Campaign', status: 'On Set', tasks: 1, availability: 80, contact: 'tom@prod.com' },
+  { id: 8, name: 'Lisa M.', role: 'Editor', project: 'Adidas Winter Promo', status: 'Available', tasks: 0, availability: 100, contact: 'lisa@prod.com' },
 ]
 
 const initialExpenses: ExpenseApproval[] = [
@@ -126,7 +126,7 @@ const initialPayments: Payment[] = [
   { id: 'PAY-004', invoice: 'INV-002', client: 'TechCorp', amount: 28000, date: 'Oct 20, 2026', method: 'Wire Transfer', status: 'Pending' },
 ]
 
-const initialTasks: Task[] = [
+export const initialTasks: Task[] = [
   { id: 1, title: 'Rough cut review for Nike Summer Campaign', project: 'Nike Summer', priority: 'High', status: 'In Progress', dueDate: 'Oct 12', assignee: 'Sarah J.' },
   { id: 2, title: 'Color grading - Local Coffee Brand Story', project: 'Local Coffee', priority: 'Medium', status: 'To Do', dueDate: 'Oct 15', assignee: 'David K.' },
   { id: 3, title: 'Audio mix for TechCorp Launch', project: 'TechCorp Launch', priority: 'High', status: 'To Do', dueDate: 'Oct 10', assignee: 'Mike T.' },
@@ -137,7 +137,7 @@ const initialTasks: Task[] = [
   { id: 8, title: 'Review feedback on Summer Campaign edit', project: 'Nike Summer', priority: 'Medium', status: 'Completed', dueDate: 'Oct 9', assignee: 'Elena R.' },
 ]
 
-const initialScheduleEvents: ScheduleEvent[] = [
+export const initialScheduleEvents: ScheduleEvent[] = [
   { id: 1, date: 8, title: 'Nike Summer - Studio Shoot', project: 'Nike Summer Campaign', location: 'Studio A', crew: 8, time: '8:00 AM - 6:00 PM', status: 'Confirmed' },
   { id: 2, date: 8, title: 'TechCorp Location Scout', project: 'TechCorp Launch', location: 'Riverside Park', crew: 3, time: '10:00 AM - 12:00 PM', status: 'Tentative' },
   { id: 3, date: 9, title: 'Spotify Spotlight - Interview', project: 'Spotify Spotlight', location: 'Warehouse', crew: 5, time: '9:00 AM - 3:00 PM', status: 'Confirmed' },
@@ -146,7 +146,7 @@ const initialScheduleEvents: ScheduleEvent[] = [
   { id: 6, date: 15, title: 'Nike Summer - Final Day', project: 'Nike Summer Campaign', location: 'Studio A', crew: 10, time: '7:00 AM - 8:00 PM', status: 'Confirmed' },
 ]
 
-const initialAssets: Record<string, AssetFile[]> = {
+export const initialAssets: Record<string, AssetFile[]> = {
   footage: [
     { name: 'Nike_Shoot_Day1.mov', type: 'Video', project: 'Nike Summer', uploadedBy: 'Elena R.', date: 'Jun 5', size: '24.5 GB' },
     { name: 'Nike_Shoot_Day2.mov', type: 'Video', project: 'Nike Summer', uploadedBy: 'David K.', date: 'Jun 6', size: '31.2 GB' },
@@ -181,7 +181,7 @@ const initialAssets: Record<string, AssetFile[]> = {
   ],
 }
 
-const initialConversations: Conversation[] = [
+export const initialConversations: Conversation[] = [
   { id: 1, name: 'Marcus Chen', role: 'Production Manager', project: 'Summer Campaign', avatar: 'MC', lastMessage: 'The rough cut looks great! Just a few notes...', time: '2m ago', unread: 2, online: true, messages: [
     { id: 1, sender: 'Marcus Chen', text: 'Hey! Just finished the rough cut for the Nike campaign.', time: '10:30 AM', isMe: false },
     { id: 2, sender: 'You', text: 'Awesome, send it over!', time: '10:32 AM', isMe: true },

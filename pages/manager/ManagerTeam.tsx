@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Users,
   Search,
@@ -7,11 +7,21 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialTeamMembers, initialTasks } from '../../store/AppStore'
 
 const roles = ['All Roles', 'Director', 'DP', 'Editor', 'Sound', 'Producer', 'Gaffer', 'PA']
+
+interface TeamMember {
+  id: number; name: string; role: string; project: string; status: string; tasks: number; availability: number; contact: string
+}
+
+interface Task {
+  id: number; title: string; project: string; priority: string; status: string; dueDate: string; assignee: string
+}
 
 export function ManagerTeam() {
   const [search, setSearch] = useState('')
@@ -22,9 +32,53 @@ export function ManagerTeam() {
   const [form, setForm] = useState({ name: '', role: '', project: '', status: 'Available', contact: '', tasks: 0, availability: 100 })
   const [editingId, setEditingId] = useState<number | null>(null)
   const [taskForm, setTaskForm] = useState({ title: '', description: '' })
-  const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, tasks, addTask } = useStore()
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { loadData() }, [])
+
+  const [isMockData, setIsMockData] = useState(false)
+
+  useEffect(() => {
+    if (isMockData) {
+      localStorage.setItem('mock_teamMembers', JSON.stringify(teamMembers))
+    }
+  }, [teamMembers, isMockData])
+
+  useEffect(() => {
+    if (isMockData) {
+      localStorage.setItem('mock_tasks', JSON.stringify(tasks))
+    }
+  }, [tasks, isMockData])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [members, allTasks] = await Promise.all([
+        apiFetch<TeamMember[]>('/team'),
+        apiFetch<Task[]>('/tasks'),
+      ])
+      setTeamMembers(members)
+      setTasks(allTasks)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const savedMembers = localStorage.getItem('mock_teamMembers')
+      const savedTasks = localStorage.getItem('mock_tasks')
+      setTeamMembers(savedMembers ? JSON.parse(savedMembers) : initialTeamMembers as TeamMember[])
+      setTasks(savedTasks ? JSON.parse(savedTasks) : initialTasks as Task[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const roleOptions = roles.filter(r => r !== 'All Roles')
+
+  const getTaskCount = (name: string) => tasks.filter(t => t.assignee === name).length
+  const getWorkload = (name: string) => Math.min(100, getTaskCount(name) * 20)
 
   const statCards = [
     { label: 'Total Team', value: String(teamMembers.length), color: 'bg-blue-50 text-blue-600', icon: Users },
@@ -45,44 +99,83 @@ export function ManagerTeam() {
     setShowModal(true)
   }
 
-  const openEditModal = (member: typeof teamMembers[0]) => {
+  const openEditModal = (member: TeamMember) => {
     setEditingId(member.id)
     setForm({ name: member.name, role: member.role, project: member.project, status: member.status, contact: member.contact, tasks: member.tasks, availability: member.availability })
     setShowModal(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return
-    if (editingId !== null) {
-      updateTeamMember(editingId, { name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
-    } else {
-      addTeamMember({ id: 0, name: form.name, role: form.role, project: form.project, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability })
+    try {
+      if (isMockData) {
+        if (editingId !== null) {
+          setTeamMembers(prev => prev.map(m => m.id === editingId ? { ...m, name: form.name, role: form.role, status: form.status, contact: form.contact } : m))
+        } else {
+          const newMember: TeamMember = { id: Date.now(), name: form.name, role: form.role, project: '', status: form.status, contact: form.contact, tasks: 0, availability: 100 }
+          setTeamMembers(prev => [...prev, newMember])
+        }
+      } else {
+        if (editingId !== null) {
+          await apiFetch(`/team/${editingId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: form.name, role: form.role, status: form.status, contact: form.contact, tasks: form.tasks, availability: form.availability }),
+          })
+        } else {
+          await apiFetch('/team', {
+            method: 'POST',
+            body: JSON.stringify({ name: form.name, role: form.role, status: form.status, contact: form.contact }),
+          })
+        }
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to save team member', err)
     }
-    setShowModal(false)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('Delete this team member?')) deleteTeamMember(id)
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this team member?')) return
+    try {
+      if (isMockData) {
+        setTeamMembers(prev => prev.filter(m => m.id !== id))
+      } else {
+        await apiFetch(`/team/${id}`, { method: 'DELETE' })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to delete team member', err)
+    }
   }
 
   const openTaskModal = (name: string) => {
+    if (getWorkload(name) >= 100) {
+      alert(`${name} is at full capacity (100% workload). Cannot assign more tasks.`)
+      return
+    }
     setTaskMember(name)
     setTaskForm({ title: '', description: '' })
     setShowTaskModal(true)
   }
 
-  const handleTaskSave = () => {
+  const handleTaskSave = async () => {
     if (!taskForm.title.trim()) return
-    addTask({
-      id: 0,
-      title: taskForm.title,
-      project: '',
-      priority: 'Medium',
-      status: 'To Do',
-      dueDate: '',
-      assignee: taskMember,
-    })
-    setShowTaskModal(false)
+    try {
+      if (isMockData) {
+        const newTask: Task = { id: Date.now(), title: taskForm.title, project: '', priority: 'Medium', status: 'To Do', dueDate: '', assignee: taskMember }
+        setTasks(prev => [...prev, newTask])
+      } else {
+        await apiFetch('/tasks', {
+          method: 'POST',
+          body: JSON.stringify({ title: taskForm.title, assignee: taskMember, priority: 'Medium', status: 'To Do', dueDate: '' }),
+        })
+        await loadData()
+      }
+      setShowTaskModal(false)
+    } catch (err) {
+      console.error('Failed to assign task', err)
+    }
   }
 
   return (
@@ -137,6 +230,11 @@ export function ManagerTeam() {
           <span className="text-sm text-slate-500"><strong className="text-slate-900">{filtered.length}</strong> members</span>
         </div>
 
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading team data...
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -154,15 +252,15 @@ export function ManagerTeam() {
               {filtered.map((member) => (
                 <tr key={member.id} className="text-sm hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <button onClick={() => setSelectedMember(member)} className="flex items-center gap-3 text-left w-full">
                       <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
                         {member.name.split(' ').map((n) => n[0]).join('')}
                       </div>
                       <div>
-                        <div className="font-medium text-slate-900">{member.name}</div>
+                        <div className="font-medium text-slate-900 hover:text-[#191970] transition-colors">{member.name}</div>
                         <div className="text-xs text-slate-400 flex items-center gap-1"><Mail className="w-3 h-3" /> {member.contact}</div>
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-slate-700">{member.role}</td>
                   <td className="px-4 py-3 text-slate-600">{member.project}</td>
@@ -170,17 +268,21 @@ export function ManagerTeam() {
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', member.status === 'On Set' ? 'bg-blue-50 text-blue-700' : member.status === 'Available' ? 'bg-emerald-50 text-emerald-700' : member.status === 'Editing' ? 'bg-purple-50 text-purple-700' : 'bg-amber-50 text-amber-700')}>{member.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-slate-700">{member.tasks} tasks</span>
+                    {getTaskCount(member.name) > 0 ? (
+                      <span className="text-slate-700">{getTaskCount(member.name)} tasks</span>
+                    ) : (
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Available</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-2 bg-slate-100 rounded-full w-24 overflow-hidden">
                         <div
-                          className={cn('h-full rounded-full transition-all', member.availability > 66 ? 'bg-emerald-500' : member.availability > 33 ? 'bg-amber-500' : 'bg-rose-500')}
-                          style={{ width: `${member.availability}%` }}
+                          className={cn('h-full rounded-full transition-all', getWorkload(member.name) < 34 ? 'bg-emerald-500' : getWorkload(member.name) < 67 ? 'bg-amber-500' : 'bg-rose-500')}
+                          style={{ width: `${getWorkload(member.name)}%` }}
                         />
                       </div>
-                      <span className={cn('text-xs font-medium', member.availability > 66 ? 'text-emerald-600' : member.availability > 33 ? 'text-amber-600' : 'text-rose-600')}>{member.availability}%</span>
+                      <span className={cn('text-xs font-medium', getWorkload(member.name) < 34 ? 'text-emerald-600' : getWorkload(member.name) < 67 ? 'text-amber-600' : 'text-rose-600')}>{getWorkload(member.name)}%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -197,6 +299,7 @@ export function ManagerTeam() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {showModal && (
@@ -260,6 +363,62 @@ export function ManagerTeam() {
                 <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
                 <button onClick={handleTaskSave} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors">Assign</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedMember(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Member Details</h3>
+              <button onClick={() => setSelectedMember(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <div className="w-12 h-12 rounded-full bg-[#191970] flex items-center justify-center text-sm font-bold text-white">
+                  {selectedMember.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">{selectedMember.name}</div>
+                  <div className="text-sm text-slate-500">{selectedMember.contact}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Role</div>
+                  <div className="font-medium text-slate-900">{selectedMember.role || '—'}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Status</div>
+                  <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-0.5', selectedMember.status === 'On Set' ? 'bg-blue-50 text-blue-700' : selectedMember.status === 'Available' ? 'bg-emerald-50 text-emerald-700' : selectedMember.status === 'Editing' ? 'bg-purple-50 text-purple-700' : 'bg-amber-50 text-amber-700')}>{selectedMember.status}</span>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Current Project</div>
+                  <div className="font-medium text-slate-900">{selectedMember.project || '—'}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Tasks</div>
+                  <div className="font-medium text-slate-900">{getTaskCount(selectedMember.name)} tasks</div>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3">
+                <div className="text-xs text-slate-500 mb-1">Workload</div>
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="h-2 bg-slate-200 rounded-full flex-1 overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full transition-all', getWorkload(selectedMember.name) < 34 ? 'bg-emerald-500' : getWorkload(selectedMember.name) < 67 ? 'bg-amber-500' : 'bg-rose-500')}
+                      style={{ width: `${getWorkload(selectedMember.name)}%` }}
+                    />
+                  </div>
+                  <span className={cn('text-xs font-medium', getWorkload(selectedMember.name) < 34 ? 'text-emerald-600' : getWorkload(selectedMember.name) < 67 ? 'text-amber-600' : 'text-rose-600')}>{getWorkload(selectedMember.name)}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+              <button onClick={() => openTaskModal(selectedMember.name)} className="px-4 py-2 text-sm font-medium text-white bg-[#191970] hover:bg-[#121258] rounded-lg transition-colors flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Assign Task</button>
+              <button onClick={() => { setSelectedMember(null); openEditModal(selectedMember) }} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors">Edit</button>
             </div>
           </div>
         </div>

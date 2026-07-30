@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Video,
@@ -9,9 +9,15 @@ import {
   Clock,
   CheckCircle2,
   ChevronRight,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialProjects, initialTeamMembers, initialEquipment } from '../../store/AppStore'
+
+interface Project { id: number; name: string; client: string; manager: string; status: string; budget: number; spent: number; timeline: string; progress: number; color: string }
+interface TeamMember { id: number; name: string; role: string; project: string; status: string; tasks: number; availability: number; contact: string }
+interface EquipmentItem { id: number; name: string; category: string; status: string; assignedTo: string; location: string; returnDate: string }
 
 const recentActivity = [
   { id: 1, user: 'Elena R.', action: 'uploaded new storyboard for', project: 'TechCorp Launch', time: '2 hours ago', isAlert: false },
@@ -30,7 +36,48 @@ const statusToPhase: Record<string, string> = {
 
 export function ManagerDashboard() {
   const navigate = useNavigate()
-  const { projects, teamMembers, equipment } = useStore()
+
+  const [projects, setProjects] = useState<Project[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
+
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [p, tm, eq] = await Promise.all([
+        apiFetch<Project[]>('/projects'),
+        apiFetch<TeamMember[]>('/team'),
+        apiFetch<EquipmentItem[]>('/equipment'),
+      ])
+      setProjects(p); setTeamMembers(tm); setEquipment(eq)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const sp = localStorage.getItem('mock_dashboard_projects')
+      const st = localStorage.getItem('mock_dashboard_team')
+      const se = localStorage.getItem('mock_dashboard_equipment')
+      setProjects(sp ? JSON.parse(sp) : initialProjects as Project[])
+      setTeamMembers(st ? JSON.parse(st) : initialTeamMembers as TeamMember[])
+      setEquipment(se ? JSON.parse(se) : initialEquipment as EquipmentItem[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_dashboard_projects', JSON.stringify(projects))
+  }, [projects, isMockData])
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_dashboard_team', JSON.stringify(teamMembers))
+  }, [teamMembers, isMockData])
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_dashboard_equipment', JSON.stringify(equipment))
+  }, [equipment, isMockData])
 
   const activeProductions = projects.filter(p => p.status !== 'Completed').map(p => {
     const teamSize = teamMembers.filter(m =>
@@ -59,6 +106,8 @@ export function ManagerDashboard() {
     status: e.status,
     location: e.location,
   }))
+
+  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading dashboard...</div>
 
   return (
     <div className="space-y-6">

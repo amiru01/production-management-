@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Camera,
   Headphones,
@@ -11,9 +11,15 @@ import {
   AlertTriangle,
   Wrench,
   X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialEquipment } from '../../store/AppStore'
+
+interface EquipmentItem {
+  id: number; name: string; category: string; status: string; assignedTo: string; location: string; returnDate: string
+}
 
 const categories = ['All', 'Cameras', 'Lenses', 'Audio', 'Lighting', 'Support', 'Other']
 
@@ -34,7 +40,33 @@ export function ManagerEquipment() {
   const [assignItem, setAssignItem] = useState('')
   const [form, setForm] = useState({ name: '', category: 'Cameras', status: 'Available', assignedTo: '', location: '', returnDate: '' })
   const [assignForm, setAssignForm] = useState({ assignedTo: '', location: '' })
-  const { equipment, addEquipment, updateEquipment, deleteEquipment } = useStore()
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
+
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const data = await apiFetch<EquipmentItem[]>('/equipment')
+      setEquipment(data)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const saved = localStorage.getItem('mock_equipment')
+      setEquipment(saved ? JSON.parse(saved) : initialEquipment as EquipmentItem[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isMockData) {
+      localStorage.setItem('mock_equipment', JSON.stringify(equipment))
+    }
+  }, [equipment, isMockData])
 
   const statCards = [
     { label: 'Total Items', value: String(equipment.length), icon: Package, color: 'bg-blue-50 text-blue-600' },
@@ -54,17 +86,40 @@ export function ManagerEquipment() {
     setShowModal(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return
-    addEquipment({
-      id: 0, name: form.name, category: form.category, status: form.status,
-      assignedTo: form.assignedTo, location: form.location, returnDate: form.returnDate,
-    })
-    setShowModal(false)
+    try {
+      if (isMockData) {
+        const newItem: EquipmentItem = {
+          id: Date.now(), name: form.name, category: form.category, status: form.status,
+          assignedTo: form.assignedTo, location: form.location, returnDate: form.returnDate,
+        }
+        setEquipment(prev => [...prev, newItem])
+      } else {
+        await apiFetch('/equipment', {
+          method: 'POST',
+          body: JSON.stringify({ name: form.name, category: form.category, status: form.status, assignedTo: form.assignedTo, location: form.location, returnDate: form.returnDate }),
+        })
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to save equipment', err)
+    }
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('Delete this equipment item?')) deleteEquipment(id)
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this equipment item?')) return
+    try {
+      if (isMockData) {
+        setEquipment(prev => prev.filter(e => e.id !== id))
+      } else {
+        await apiFetch('/equipment/' + id, { method: 'DELETE' })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to delete equipment', err)
+    }
   }
 
   const openAssignModal = (name: string) => {
@@ -75,12 +130,23 @@ export function ManagerEquipment() {
     setShowAssignModal(true)
   }
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     const item = equipment.find(e => e.name === assignItem)
-    if (item) {
-      updateEquipment(item.id, { assignedTo: assignForm.assignedTo, location: assignForm.location, status: 'In Use' })
+    if (!item) return
+    try {
+      if (isMockData) {
+        setEquipment(prev => prev.map(e => e.id === item.id ? { ...e, assignedTo: assignForm.assignedTo, location: assignForm.location, status: 'In Use' } : e))
+      } else {
+        await apiFetch('/equipment/' + item.id, {
+          method: 'PUT',
+          body: JSON.stringify({ assignedTo: assignForm.assignedTo, location: assignForm.location, status: 'In Use' }),
+        })
+        await loadData()
+      }
+      setShowAssignModal(false)
+    } catch (err) {
+      console.error('Failed to assign equipment', err)
     }
-    setShowAssignModal(false)
   }
 
   const handleExport = () => {
@@ -145,6 +211,11 @@ export function ManagerEquipment() {
           </div>
         </div>
 
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading equipment data...
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((item) => (
             <div key={item.id} className="border border-slate-200 rounded-xl hover:shadow-md transition-all group">
@@ -174,8 +245,9 @@ export function ManagerEquipment() {
             </div>
           ))}
         </div>
+        )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !loading && (
           <div className="text-center py-12 text-slate-400">
             <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
             <p className="font-medium">No equipment found</p>

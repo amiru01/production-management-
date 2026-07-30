@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   MessageSquare,
   Send,
@@ -18,11 +18,17 @@ import {
   User,
   Users,
   UserCheck,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialConversations } from '../../store/AppStore'
+import { useSocket } from '../../lib/socket'
 
-interface Message {
+interface Message { id: number; sender: string; text: string; time: string; isMe: boolean }
+interface Conversation { id: number; name: string; role: string; avatar: string; lastMessage: string; time: string; unread: number; online: boolean; project?: string; messages: Message[] }
+
+interface ContactMessage {
   id: number
   sender: 'me' | 'contact'
   text: string
@@ -41,7 +47,7 @@ interface Contact {
   time: string
   unread: number
   online: boolean
-  messages: Message[]
+  messages: ContactMessage[]
   category: 'admin' | 'crew' | 'accountant' | 'client'
 }
 
@@ -68,12 +74,38 @@ const categoryConfig: Record<string, { label: string; icon: React.ReactNode }> =
 }
 
 export function ManagerMessages() {
-  const { conversations: storeConversations, sendMessage: storeSendMessage } = useStore()
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
   const [messageInput, setMessageInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(['Summer Campaign']))
 
-  const conversations: Contact[] = storeConversations.map(c => {
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const data = await apiFetch<Conversation[]>('/messages/conversations')
+      setConversations(data)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const saved = localStorage.getItem('mock_conversations')
+      setConversations(saved ? JSON.parse(saved) : initialConversations as Conversation[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_conversations', JSON.stringify(conversations))
+  }, [conversations, isMockData])
+
+  const { onlineUserIds, joinConversation, leaveConversation, emitTyping, emitStopTyping, markConversationRead, onNewMessage, typingUsers } = useSocket()
+
+  const contacts: Contact[] = conversations.map(c => {
     let category: Contact['category'] = 'crew'
     if (c.role === 'Super Admin' || c.role === 'Studio Admin') category = 'admin'
     else if (c.role === 'Accountant') category = 'accountant'
@@ -89,7 +121,7 @@ export function ManagerMessages() {
       lastMessage: c.lastMessage,
       time: c.time,
       unread: c.unread,
-      online: c.online,
+      online: isMockData ? c.online : onlineUserIds.has(c.id),
       messages: c.messages.map(m => ({
         id: m.id,
         sender: m.isMe ? 'me' as const : 'contact' as const,
@@ -101,10 +133,60 @@ export function ManagerMessages() {
     }
   })
 
-  const [activeContactId, setActiveContactId] = useState<number>(conversations[0]?.id || 0)
-  const activeContact = conversations.find((c) => c.id === activeContactId)
+  const [activeContactId, setActiveContactId] = useState<number>(0)
+  const activeContact = contacts.find((c) => c.id === activeContactId)
 
-  const filteredConversations = conversations.filter((c) =>
+  useEffect(() => {
+    if (!loading && activeContactId === 0 && contacts.length > 0) {
+      setActiveContactId(contacts[0].id)
+    }
+  }, [loading, contacts, activeContactId])
+
+  useEffect(() => {
+    if (!isMockData && activeContactId > 0) {
+      joinConversation(activeContactId)
+      markConversationRead(activeContactId)
+      return () => leaveConversation(activeContactId)
+    }
+  }, [activeContactId, isMockData, joinConversation, leaveConversation, markConversationRead])
+
+  const activeContactIdRef = useRef(activeContactId)
+  activeContactIdRef.current = activeContactId
+
+  useEffect(() => {
+    if (!isMockData) {
+      onNewMessage((data: any) => {
+        setConversations(prev => prev.map(c => {
+          if (c.id !== data.conversationId) return c
+          const newMsg: Message = { id: data.message.id, sender: data.message.sender, text: data.message.text, time: data.message.time, isMe: data.message.isMe }
+          return { ...c, messages: [...c.messages, newMsg], lastMessage: data.message.text, time: data.message.time, unread: c.id === activeContactIdRef.current ? 0 : (c.unread || 0) + 1 }
+        }))
+      })
+    }
+  }, [isMockData, onNewMessage])
+
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleTyping = () => {
+    if (isMockData || !activeContact) return
+    emitTyping(activeContact.id, 0, '')
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => {
+      emitStopTyping(activeContact.id, 0)
+    }, 1500)
+  }
+
+  useEffect(() => {
+    if (!isMockData && activeContactId > 0) {
+      apiFetch<Conversation>('/messages/conversations/' + activeContactId)
+        .then(data => {
+          setConversations(prev => prev.map(c => c.id === data.id ? data : c))
+        })
+        .catch(err => console.error('Failed to load messages', err))
+    }
+  }, [activeContactId, isMockData])
+
+  const filteredConversations = contacts.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -123,9 +205,31 @@ export function ManagerMessages() {
   const accountantConversations = filteredConversations.filter(c => c.category === 'accountant')
   const clientConversations = filteredConversations.filter(c => c.category === 'client')
 
-  const handleSend = () => {
+  const sendMessage = (conversationId: number, text: string) => {
+    setConversations(prev => prev.map(c => {
+      if (c.id !== conversationId) return c
+      const newMsg: Message = { id: (c.messages.length + 1), sender: 'You', text, time: 'Just now', isMe: true }
+      return { ...c, messages: [...c.messages, newMsg], lastMessage: text, time: 'Just now' }
+    }))
+  }
+
+  const handleSend = async () => {
     if (!messageInput.trim() || !activeContact) return
-    storeSendMessage(activeContact.id, messageInput)
+    if (isMockData) {
+      sendMessage(activeContact.id, messageInput)
+    } else {
+      try {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+        emitStopTyping(activeContact.id, 0)
+        await apiFetch('/messages/conversations/' + activeContact.id + '/messages', {
+          method: 'POST',
+          body: JSON.stringify({ text: messageInput }),
+        })
+        sendMessage(activeContact.id, messageInput)
+      } catch (err) {
+        console.error('Failed to send message', err)
+      }
+    }
     setMessageInput('')
   }
 
@@ -231,7 +335,11 @@ export function ManagerMessages() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {searchQuery ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-20 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading messages...
+              </div>
+            ) : searchQuery ? (
               filteredConversations.map(renderContactItem)
             ) : (
               <>
@@ -283,6 +391,9 @@ export function ManagerMessages() {
                       <span>{activeContact.project}</span>
                       <span className={cn('w-1.5 h-1.5 rounded-full', activeContact.online ? 'bg-emerald-500' : 'bg-slate-300')} />
                       <span>{activeContact.online ? 'Online' : 'Offline'}</span>
+                      {!isMockData && (typingUsers[activeContact.id] || []).length > 0 && (
+                        <span className="text-emerald-600 font-medium ml-1 animate-pulse">typing...</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -343,7 +454,7 @@ export function ManagerMessages() {
                   <div className="flex-1">
                     <textarea
                       value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
+                      onChange={(e) => { setMessageInput(e.target.value); handleTyping() }}
                       placeholder={`Message ${activeContact.name}...`}
                       rows={1}
                       className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"

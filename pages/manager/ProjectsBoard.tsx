@@ -1,7 +1,10 @@
-import React, { useState } from 'react'
-import { Plus, MoreHorizontal, Calendar, Users, X, ChevronDown } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus, MoreHorizontal, Calendar, Users, X, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialProjects } from '../../store/AppStore'
+
+interface Project { id: number; name: string; client: string; manager: string; status: string; budget: number; spent: number; timeline: string; progress: number; color: string }
 
 const columnConfig = [
   { id: 'planning', title: 'Planning', color: 'bg-slate-100 border-slate-200 text-slate-700' },
@@ -30,11 +33,35 @@ const columnToStatus: Record<string, string> = {
 const statusCycle = ['planning', 'pre-prod', 'shooting', 'post-prod', 'delivered']
 
 export function ProjectsBoard() {
-  const { projects, addProject, updateProject, deleteProject } = useStore()
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState({ name: '', client: '', tags: '' })
   const [menuOpen, setMenuOpen] = useState<number | null>(null)
+
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const data = await apiFetch<Project[]>('/projects')
+      setProjects(data)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const saved = localStorage.getItem('mock_projects')
+      setProjects(saved ? JSON.parse(saved) : initialProjects as Project[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isMockData) localStorage.setItem('mock_projects', JSON.stringify(projects))
+  }, [projects, isMockData])
 
   const columns = columnConfig.map(col => ({
     ...col,
@@ -47,46 +74,84 @@ export function ProjectsBoard() {
     setShowModal(true)
   }
 
-  const openEditModal = (project: typeof projects[0]) => {
+  const openEditModal = (project: Project) => {
     setEditingId(project.id)
     setForm({ name: project.name, client: project.client, tags: '' })
     setShowModal(true)
     setMenuOpen(null)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return
-    if (editingId !== null) {
-      updateProject(editingId, { name: form.name, client: form.client })
-    } else {
-      addProject({
-        id: 0,
-        name: form.name,
-        client: form.client,
-        manager: '',
-        status: 'Planning',
-        budget: 0,
-        spent: 0,
-        timeline: '',
-        progress: 0,
-        color: 'bg-blue-500',
-      })
+    try {
+      if (isMockData) {
+        if (editingId !== null) {
+          setProjects(prev => prev.map(p => p.id === editingId ? { ...p, name: form.name, client: form.client } : p))
+        } else {
+          const newProject: Project = { id: Date.now(), name: form.name, client: form.client, manager: '', status: 'Planning', budget: 0, spent: 0, timeline: '', progress: 0, color: 'bg-blue-500' }
+          setProjects(prev => [...prev, newProject])
+        }
+      } else {
+        if (editingId !== null) {
+          await apiFetch('/projects/' + editingId, {
+            method: 'PUT',
+            body: JSON.stringify({ name: form.name, client: form.client }),
+          })
+        } else {
+          await apiFetch('/projects', {
+            method: 'POST',
+            body: JSON.stringify({ name: form.name, client: form.client, status: 'Planning' }),
+          })
+        }
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to save project', err)
     }
-    setShowModal(false)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('Delete this project?')) {
-      deleteProject(id)
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this project?')) return
+    try {
+      if (isMockData) {
+        setProjects(prev => prev.filter(p => p.id !== id))
+      } else {
+        await apiFetch('/projects/' + id, { method: 'DELETE' })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to delete project', err)
     }
     setMenuOpen(null)
   }
 
-  const cycleStatus = (projectId: number, currentStatus: string) => {
+  const cycleStatus = async (projectId: number, currentStatus: string) => {
     const currentCol = statusToColumn[currentStatus] || 'planning'
     const idx = statusCycle.indexOf(currentCol)
     const nextCol = statusCycle[(idx + 1) % statusCycle.length]
-    updateProject(projectId, { status: columnToStatus[nextCol] })
+    const newStatus = columnToStatus[nextCol]
+    try {
+      if (isMockData) {
+        setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p))
+      } else {
+        await apiFetch('/projects/' + projectId, {
+          method: 'PUT',
+          body: JSON.stringify({ status: newStatus }),
+        })
+        await loadData()
+      }
+    } catch (err) {
+      console.error('Failed to update project status', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading projects...
+      </div>
+    )
   }
 
   return (

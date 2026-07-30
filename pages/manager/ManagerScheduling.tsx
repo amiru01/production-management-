@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Calendar,
   ChevronLeft,
@@ -12,13 +12,17 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
-import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
+import { initialScheduleEvents } from '../../store/AppStore'
 
 const today = new Date()
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+interface ScheduleEvent { id: number; date: number; title: string; project: string; location: string; crew: string | number; time: string; status: string }
 
 export function ManagerScheduling() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -26,7 +30,33 @@ export function ManagerScheduling() {
   const [showModal, setShowModal] = useState(false)
   const [showCallSheet, setShowCallSheet] = useState(false)
   const [form, setForm] = useState({ date: today.getDate(), title: '', project: '', location: '', crew: '', time: '', status: 'Tentative' })
-  const { scheduleEvents, addScheduleEvent, updateScheduleEvent, deleteScheduleEvent } = useStore()
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMockData, setIsMockData] = useState(false)
+
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const data = await apiFetch<ScheduleEvent[]>('/schedule')
+      setScheduleEvents(data)
+      setIsMockData(false)
+    } catch (err) {
+      console.warn('Backend unavailable, using mock data', err)
+      const saved = localStorage.getItem('mock_schedule')
+      setScheduleEvents(saved ? JSON.parse(saved) : initialScheduleEvents as ScheduleEvent[])
+      setIsMockData(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isMockData) {
+      localStorage.setItem('mock_schedule', JSON.stringify(scheduleEvents))
+    }
+  }, [scheduleEvents, isMockData])
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay()
@@ -58,13 +88,23 @@ export function ManagerScheduling() {
     setShowModal(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) return
-    addScheduleEvent({
-      id: 0, date: form.date, title: form.title, project: form.project, location: form.location,
-      crew: form.crew ? parseInt(form.crew) || form.crew : 1, time: form.time, status: form.status,
-    })
-    setShowModal(false)
+    try {
+      if (isMockData) {
+        const newEvent: ScheduleEvent = { id: Date.now(), date: form.date, title: form.title, project: form.project, location: form.location, crew: form.crew ? parseInt(form.crew) || form.crew : 1, time: form.time, status: form.status }
+        setScheduleEvents(prev => [...prev, newEvent])
+      } else {
+        await apiFetch('/schedule', {
+          method: 'POST',
+          body: JSON.stringify({ date: form.date, title: form.title, projectId: form.project, location: form.location, crew: form.crew ? parseInt(form.crew) || form.crew : 1, time: form.time, status: form.status }),
+        })
+        await loadData()
+      }
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to save schedule event', err)
+    }
   }
 
   const scheduleTable = scheduleEvents.filter(e => e.date >= today.getDate()).slice(0, 5).map(e => ({
@@ -92,6 +132,12 @@ export function ManagerScheduling() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-slate-400">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading schedule data...
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><Camera className="w-5 h-5" /></div>
@@ -211,6 +257,7 @@ export function ManagerScheduling() {
           </div>
         </div>
       </div>
+      </>)}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
