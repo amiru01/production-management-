@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   UploadCloud,
   FileVideo,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { useStore } from '../../store/AppStore'
+import { apiFetch } from '../../lib/api'
 
 type FileStatus = 'Uploading' | 'Uploaded' | 'Failed'
 type FileType = 'Video' | 'Audio' | 'Photo' | 'Document'
@@ -23,6 +24,7 @@ type FeedbackStatus = 'Pending Review' | 'Approved' | 'Needs Revision'
 
 interface AssetFile {
   id: number
+  assetId?: number
   name: string
   type: FileType
   project: string
@@ -62,6 +64,28 @@ const feedbackStatusStyles: Record<FeedbackStatus, { icon: any; color: string; b
 
 const fileTypeFilters: FileType[] = ['Video', 'Audio', 'Photo', 'Document']
 
+function fileTypeFromName(name: string): FileType {
+  const ext = name.split('.').pop()?.toLowerCase() || ''
+  if (['mp4', 'mov', 'avi', 'mkv', 'm4v', 'webm'].includes(ext)) return 'Video'
+  if (['wav', 'mp3', 'aiff', 'aac', 'flac', 'ogg'].includes(ext)) return 'Audio'
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'tif', 'tiff'].includes(ext)) return 'Photo'
+  return 'Document'
+}
+
+function folderFromType(type: FileType): string {
+  if (type === 'Video') return 'footage'
+  if (type === 'Audio') return 'audio'
+  if (type === 'Photo') return 'photos'
+  return 'documents'
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${bytes} B`
+}
+
 export function CrewAssets() {
   const { assets: storeAssets, addAsset, deleteAsset } = useStore()
 
@@ -88,26 +112,72 @@ export function CrewAssets() {
   const [dragOver, setDragOver] = useState(false)
   const [typeFilter, setTypeFilter] = useState<FileType | 'All'>('All')
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const uploadFile = (name: string, type: FileType = 'Video', project: string = 'Nike Summer Campaign') => {
-    setUploadingFile(name)
-    addAsset('footage', { name, type, project, uploadedBy: 'You', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: '0 MB' })
-    const newFile: AssetFile = {
-      id: Date.now(),
-      name,
-      type,
-      project,
-      uploadedAt: 'Just now',
-      status: 'Uploading',
-      size: '0 MB',
-      version: 1,
-      feedbackStatus: 'Pending Review',
+  useEffect(() => {
+    apiFetch<Record<string, any[]>>('/assets')
+      .then(data => {
+        const backendFiles: AssetFile[] = []
+        Object.entries(data).forEach(([, list]) => {
+          list.forEach((a: any) => {
+            backendFiles.push({
+              id: Date.now() + Math.random(),
+              assetId: a.id,
+              name: a.name,
+              type: storeTypeToLocal[a.type] || 'Document',
+              project: a.project || '',
+              uploadedAt: a.date,
+              status: 'Uploaded' as FileStatus,
+              size: a.size,
+              version: 1,
+              feedbackStatus: 'Pending Review' as FeedbackStatus,
+            })
+          })
+        })
+        setFiles(prev => {
+          const existingNames = new Set(prev.map(f => f.name))
+          return [...prev, ...backendFiles.filter(f => !existingNames.has(f.name))]
+        })
+      })
+      .catch(() => {})
+  }, [])
+
+  const uploadFiles = async (fileList: FileList | File[]) => {
+    for (const file of Array.from(fileList)) {
+      const type = fileTypeFromName(file.name)
+      const folder = folderFromType(type)
+      const size = formatBytes(file.size)
+      const newFile: AssetFile = {
+        id: Date.now() + Math.random(),
+        name: file.name,
+        type,
+        project: 'Nike Summer Campaign',
+        uploadedAt: 'Just now',
+        status: 'Uploading',
+        size,
+        version: 1,
+        feedbackStatus: 'Pending Review',
+      }
+      setFiles(prev => [newFile, ...prev])
+      setUploadingFile(file.name)
+      try {
+        const created = await apiFetch<any>('/assets', {
+          method: 'POST',
+          body: JSON.stringify({ name: file.name, type, folder, projectId: 1, uploadedBy: 'You', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size }),
+        })
+        addAsset(folder, { name: file.name, type, project: created.project || newFile.project, uploadedBy: 'You', date: created.date, size })
+        setFiles(prev => prev.map(f => f.id === newFile.id ? { ...f, status: 'Uploaded' as FileStatus, assetId: created.id, project: created.project || f.project } : f))
+      } catch {
+        setFiles(prev => prev.map(f => f.id === newFile.id ? { ...f, status: 'Failed' as FileStatus } : f))
+      } finally {
+        setUploadingFile(null)
+      }
     }
-    setFiles(prev => [newFile, ...prev])
-    setTimeout(() => {
-      setFiles(prev => prev.map(f => f.id === newFile.id ? { ...f, status: 'Uploaded' as FileStatus, size: '1.2 GB' } : f))
-      setUploadingFile(null)
-    }, 2500)
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) uploadFiles(e.target.files)
+    e.target.value = ''
   }
 
   const handleDelete = (file: AssetFile) => {
@@ -115,6 +185,9 @@ export function CrewAssets() {
     const folder = Object.entries(storeAssets).find(([, fl]) => fl.some(f => f.name === file.name))?.[0] || 'footage'
     deleteAsset(folder, file.name)
     setFiles(prev => prev.filter(f => f.id !== file.id))
+    if (file.assetId) {
+      apiFetch(`/assets/${file.assetId}`, { method: 'DELETE' }).catch(() => {})
+    }
   }
 
   const incrementVersion = (id: number) => {
@@ -174,15 +247,16 @@ export function CrewAssets() {
         </div>
       </div>
 
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInput} />
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); uploadFile('Dropped_File.mp4') }}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files) }}
+        onClick={() => fileInputRef.current?.click()}
         className={cn(
           'border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer',
           dragOver ? 'border-emerald-400 bg-emerald-50/50' : 'border-slate-300 hover:border-slate-400 bg-white'
         )}
-        onClick={() => uploadFile('New_Upload_Asset.mp4')}
       >
         <UploadCloud className={cn('w-10 h-10 mx-auto mb-3 transition-colors', dragOver ? 'text-emerald-500' : 'text-slate-400')} />
         <p className="text-sm font-medium text-slate-700 mb-1">Drag & drop files here, or click to browse</p>

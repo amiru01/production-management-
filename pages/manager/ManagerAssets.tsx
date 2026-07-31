@@ -20,6 +20,7 @@ import {
 import { cn } from '../../utils'
 import { apiFetch } from '../../lib/api'
 import { initialAssets } from '../../store/AppStore'
+import { useSocket } from '../../lib/socket'
 
 interface AssetFile { name: string; type: string; project: string; uploadedBy: string; date: string; size: string }
 
@@ -52,6 +53,7 @@ export function ManagerAssets() {
   const [assets, setAssets] = useState<Record<string, AssetFile[]>>({})
   const [loading, setLoading] = useState(true)
   const [isMockData, setIsMockData] = useState(false)
+  const { onAssetUploaded } = useSocket()
 
   useEffect(() => { loadData() }, [])
 
@@ -74,6 +76,10 @@ export function ManagerAssets() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    onAssetUploaded(() => { loadData() })
+  }, [onAssetUploaded])
 
   const folders = Object.entries(folderMeta).map(([id, meta]) => {
     const files = assets[id] || []

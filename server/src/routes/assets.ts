@@ -24,6 +24,20 @@ assetsRouter.post('/', async (req, res) => {
     data: { name, type: type || '', folder: folder || 'footage', projectId: projectId || 1, uploadedBy: uploadedBy || req.user!.name, date: date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), size: size || '' },
     include: { project: { select: { name: true } } },
   })
+  const io = req.app.get('io')
+  if (io && req.user!.role === 'crew') {
+    io.emit('asset_uploaded', {
+      id: asset.id,
+      name: asset.name,
+      type: asset.type,
+      folder: asset.folder,
+      project: asset.project?.name || '',
+      uploadedBy: asset.uploadedBy,
+      userName: req.user!.name,
+      date: asset.date,
+      size: asset.size,
+    })
+  }
   res.status(201).json({ ...asset, project: asset.project?.name || '' })
 })
 

@@ -23,7 +23,9 @@ import {
   Building2,
   ClipboardList,
   Receipt,
+  UploadCloud,
 } from 'lucide-react'
+import { useSocket } from '../lib/socket'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -116,6 +118,19 @@ export function Layout({ children }: LayoutProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const role = user!.role
   const config = roleConfigs[role]
+  const { onAssetUploaded } = useSocket()
+
+  const [uploadToast, setUploadToast] = useState<{ id: number; body: string } | null>(null)
+  const toastTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (role !== 'manager') return
+    onAssetUploaded((data: any) => {
+      setUploadToast({ id: Date.now(), body: `${data.userName} uploaded ${data.name}${data.project ? ` to ${data.project}` : ''}` })
+      if (toastTimer.current) window.clearTimeout(toastTimer.current)
+      toastTimer.current = window.setTimeout(() => setUploadToast(null), 8000)
+    })
+  }, [role, onAssetUploaded])
 
   useEffect(() => {
     const handler = () => setCompanyLogo(localStorage.getItem('company_logo'))
@@ -275,6 +290,30 @@ export function Layout({ children }: LayoutProps) {
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
+
+      {/* Upload Notification */}
+      {role === 'manager' && uploadToast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-white rounded-xl border border-slate-200 shadow-xl p-4 w-80 max-w-[calc(100vw-2rem)]">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><UploadCloud className="w-5 h-5" /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900">New Upload</p>
+              <p className="text-xs text-slate-500 mt-0.5 truncate">{uploadToast.body}</p>
+              <div className="flex gap-2 mt-2.5">
+                <button
+                  onClick={() => { setUploadToast(null); navigate('/manager/assets') }}
+                  className="text-xs font-medium text-white bg-[#191970] hover:bg-[#121258] px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  View
+                </button>
+                <button onClick={() => setUploadToast(null)} className="text-xs font-medium text-slate-600 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

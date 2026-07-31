@@ -32,6 +32,7 @@ model User {
   assignedProjects Project[] @relation("ProjectManager")
   sentMessages    Message[]
   tasks           Task[]
+  timeLogs        TimeLog[]
 }
 
 model Setting {
@@ -286,4 +287,15 @@ model Message {
   conversation     Conversation @relation(fields: [conversationId], references: [id])
   user             User?         @relation(fields: [senderId], references: [id])
   senderId         Int?
+}
+
+model TimeLog {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  clockIn   DateTime  @default(now())
+  clockOut  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
 }

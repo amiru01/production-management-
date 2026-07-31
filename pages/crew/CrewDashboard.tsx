@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CheckSquare,
@@ -9,13 +9,57 @@ import {
   AlertCircle,
   UploadCloud,
   PlayCircle,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { useStore } from '../../store/AppStore'
+import { useAuth } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/api'
+
+interface TimeLog {
+  id: number
+  userId: number
+  clockIn: string
+  clockOut: string | null
+}
+
+function formatClockTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
 
 export function CrewDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { tasks, scheduleEvents, equipment } = useStore()
+  const [activeLog, setActiveLog] = useState<TimeLog | null>(null)
+  const [clockLoading, setClockLoading] = useState(true)
+  const [clockMsg, setClockMsg] = useState<string | null>(null)
+  const [clockError, setClockError] = useState<string | null>(null)
+
+  useEffect(() => {
+    apiFetch<TimeLog | null>('/timelogs/active')
+      .then(log => setActiveLog(log))
+      .catch(() => setActiveLog(null))
+      .finally(() => setClockLoading(false))
+  }, [])
+
+  const handleClock = async () => {
+    setClockError(null)
+    setClockMsg(null)
+    try {
+      if (activeLog) {
+        const updated = await apiFetch<TimeLog>(`/timelogs/${activeLog.id}/clock-out`, { method: 'POST' })
+        setActiveLog(null)
+        setClockMsg(`Clocked out at ${formatClockTime(updated.clockOut!)}`)
+      } else {
+        const created = await apiFetch<TimeLog>('/timelogs/clock-in', { method: 'POST' })
+        setActiveLog(created)
+        setClockMsg(`Clocked in at ${formatClockTime(created.clockIn)}`)
+      }
+    } catch (e: any) {
+      setClockError(e.message || 'Failed to update time log')
+    }
+  }
 
   const todayTasks = tasks.filter(t => t.status !== 'Completed').slice(0, 3).map(t => ({
     id: t.id,
@@ -47,14 +91,30 @@ export function CrewDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Welcome back, David</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Welcome back, {user?.name?.split(' ')[0] || 'David'}</h2>
           <p className="text-slate-500">Here's your schedule and tasks for today.</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => navigate('/crew/assets')} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
-            <UploadCloud className="w-4 h-4" /> Upload Assets
-          </button>
-          <button onClick={() => alert('Clocked in! Your shift has been logged.')} className="bg-[#191970] hover:bg-[#121258] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Clock In</button>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/crew/assets')} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+              <UploadCloud className="w-4 h-4" /> Upload Assets
+            </button>
+            <button
+              onClick={handleClock}
+              disabled={clockLoading}
+              className={cn(
+                'px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50',
+                activeLog
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-[#191970] hover:bg-[#121258] text-white'
+              )}
+            >
+              {activeLog ? <LogOut className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+              {activeLog ? `Clock Out (${formatClockTime(activeLog.clockIn)})` : 'Clock In'}
+            </button>
+          </div>
+          {clockError && <span className="text-xs text-red-600">{clockError}</span>}
+          {clockMsg && <span className="text-xs text-emerald-600">{clockMsg}</span>}
         </div>
       </div>
 

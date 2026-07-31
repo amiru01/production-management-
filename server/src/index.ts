@@ -18,6 +18,7 @@ import { messagesRouter } from './routes/messages.js'
 import { teamRouter } from './routes/team.js'
 import { reportsRouter } from './routes/reports.js'
 import { settingsRouter } from './routes/settings.js'
+import { timelogsRouter } from './routes/timelogs.js'
 
 const app = express()
 const server = createServer(app)
@@ -123,6 +124,7 @@ app.use('/api/messages', messagesRouter)
 app.use('/api/team', teamRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/settings', settingsRouter)
+app.use('/api/timelogs', timelogsRouter)
 
 app.set('io', io)
 

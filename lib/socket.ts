@@ -7,7 +7,7 @@ export function useSocket() {
   const [isConnected, setIsConnected] = useState(false)
   const [onlineUserIds, setOnlineUserIds] = useState<Set<number>>(new Set())
   const [typingUsers, setTypingUsers] = useState<Record<number, number[]>>({})
-  const listenersRef = useRef<{ newMessage?: (data: any) => void }>({})
+  const listenersRef = useRef<{ newMessage?: (data: any) => void; assetUploaded?: (data: any) => void }>({})
 
   useEffect(() => {
     const token = getToken()
@@ -32,6 +32,12 @@ export function useSocket() {
     socket.on('new_message', (data: any) => {
       if (listenersRef.current.newMessage) {
         listenersRef.current.newMessage(data)
+      }
+    })
+
+    socket.on('asset_uploaded', (data: any) => {
+      if (listenersRef.current.assetUploaded) {
+        listenersRef.current.assetUploaded(data)
       }
     })
 
@@ -79,6 +85,10 @@ export function useSocket() {
     listenersRef.current.newMessage = cb
   }, [])
 
+  const onAssetUploaded = useCallback((cb: (data: any) => void) => {
+    listenersRef.current.assetUploaded = cb
+  }, [])
+
   return {
     isConnected,
     onlineUserIds,
@@ -89,5 +99,6 @@ export function useSocket() {
     emitStopTyping,
     markConversationRead,
     onNewMessage,
+    onAssetUploaded,
   }
 }

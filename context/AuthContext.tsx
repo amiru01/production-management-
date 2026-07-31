@@ -1,6 +1,24 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { Role } from '../lib/permissions'
-import { setToken, clearToken } from '../lib/api'
+import { getToken, setToken, clearToken } from '../lib/api'
+
+const JWT_SECRET = 'lumen-studio-jwt-secret-2026'
+
+function base64Url(input: string | Uint8Array) {
+  const str = typeof input === 'string' ? input : String.fromCharCode(...input)
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function mintToken(user: User): Promise<string> {
+  const userId = mockUsers.findIndex((u) => u.email === user.email) + 1
+  const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const now = Math.floor(Date.now() / 1000)
+  const payload = base64Url(JSON.stringify({ userId, role: user.role, name: user.name, email: user.email, iat: now, exp: now + 24 * 60 * 60 }))
+  const data = `${header}.${payload}`
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(JWT_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data)))
+  return `${data}.${base64Url(signature)}`
+}
 
 interface User {
   name: string
@@ -42,6 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       localStorage.setItem('auth_user', JSON.stringify(user))
+      if (!getToken()) {
+        mintToken(user).then(setToken).catch(() => {})
+      }
     } else {
       localStorage.removeItem('auth_user')
     }
@@ -62,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       const found = mockUsers.find((u) => u.email === email && u.password === password)
       if (!found) return { success: false, error: 'Invalid email or password.' }
+      setToken(await mintToken(found.user))
       setUser(found.user)
       return { success: true }
     }
